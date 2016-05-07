@@ -19,6 +19,16 @@ exprs =
      ("parent[\"child\"]", Get ["parent", "child"]),
      ("asdf = 4", Set ["asdf"] $ Lit $ I 4),
      ("{ a : 1.0 b : \"test\"}", Obj $ mkObj % ("a", 1.0 :: Float) % ("b", "test")),
+     ("{ a : 1.0 \"test\" b : \"test2\" } ",
+        Obj $ mkObj % ("a", 1.0 :: Float)
+                    % (0 :: Integer, "test")
+                    % ( "b", "test2")),
+     ("{ 1 : 1.0  3 : \"test\" }",
+         Obj $ mkObj % (1 :: Integer, 1.0 :: Float)
+                     % (3 :: Integer, "test")),
+     ("{ 1.0 \"test\" }",
+         Obj $ mkObj % (0 :: Integer, 1.0 :: Float)
+                     % (1 :: Integer, "test")),
      ("if sdf then wqer = 4 else zxcv = 7",
             If (Get ["sdf"])
             (Set ["wqer"] $ Lit $ I $ 4)

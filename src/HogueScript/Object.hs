@@ -13,6 +13,8 @@ module HogueScript.Object
   makeEvalState,
   eval,
   EvalState(..),
+  ObjKey(..),
+  ObjKeySrc(..),
   PropError,
   (%)
 ) where
@@ -24,7 +26,7 @@ import Control.Monad.State
 data Type = BOOL | CHAR | STRING | INT | FLOAT | OBJECT
             deriving (Show, Eq)
 data PropError = BAD_TYPE Type --Type
-                 | NO_SUCH_PROP String
+                 | NO_SUCH_PROP ObjKey
                  | TRACE Expr PropError
                  deriving (Show, Eq)
 
@@ -113,8 +115,45 @@ instance LiteralType Object where
     fromExpr (Lit _) = lift $ Left $ BAD_TYPE OBJECT
     fromExpr expr = eval expr >>= fromExpr
 
+data ObjKey = StrKey String | NumKey Integer | NullKey
+            deriving (Show, Ord, Eq)
+
+class ObjKeySrc a where
+    getKey :: a -> ObjKey
+
+--instance ObjKeySrc Int where
+--    getKey n = NumKey n
+--
+
+instance ObjKeySrc Integer where
+    getKey n = NumKey n
+
+instance ObjKeySrc String where
+    getKey str = StrKey str
+    
+
 -- The map of properties for an entity
-type Object = Map String Expr
+type Object = Map ObjKey Expr
+
+-- A zipper for Objects
+-- basic type is ObjZipper [] Object
+data ObjZipper = ObjZipper [(Object, ObjKey)] Expr
+
+getField :: ObjZipper -> ObjKey -> Either PropError ObjZipper
+getField (ObjZipper path expr) field = 
+    case expr of
+      (Obj obj) -> Right $ ObjZipper ((obj,field):path) $
+                            Map.findWithDefault Null field obj
+      _ -> Left $ NO_SUCH_PROP field
+
+collapse :: ObjZipper -> ObjZipper
+collapse (ObjZipper [] expr) = ObjZipper [] expr
+collapse (ObjZipper ((obj,field):path) expr) = 
+    collapse $
+        ObjZipper path $ Obj $ Map.insert field expr obj
+
+
+
 
 
 -- The state of evaluation of a property expression
@@ -136,7 +175,7 @@ makeEvalState propMap =
     EvalState propMap Nothing
 
 -- | Set a property to an expression.
-setPropM :: [String] -> Expr -> EvalMonad Expr
+setPropM :: [ObjKey] -> Expr -> EvalMonad Expr
 setPropM (propName:[]) value = do
     propMap <- fmap getObject get
     let oldExpr = Map.findWithDefault Null propName propMap
@@ -144,9 +183,9 @@ setPropM (propName:[]) value = do
     modify (setPropMap propMap')
     return oldExpr
 
-setProp :: (LiteralType a) => (String, a) -> Object -> Object
+setProp :: (LiteralType a, ObjKeySrc s) => (s, a) -> Object -> Object
 setProp (prop,value) obj = 
-    Map.insert prop (getExpr value) obj
+    Map.insert (getKey prop) (getExpr value) obj
 
 mkObj :: Object
 mkObj = Map.empty
@@ -155,14 +194,14 @@ mkObj = Map.empty
 -- infix setProp, allows for the following
 -- mkObj % ("prop1", "value1") % ("prop2", 11 :: Int)
 infixl 5 %
-(%) :: (LiteralType a) => Object -> (String, a) -> Object
+(%) :: (LiteralType a, ObjKeySrc s) => Object -> (s, a) -> Object
 obj % property = setProp property obj
 
 setProps :: (LiteralType a) => [(String, a)] -> Object -> Object
 setProps props obj = foldr setProp obj props
 
 -- | Get the expression associated with a property
-getProp :: [String] -> EvalMonad Expr
+getProp :: [ObjKey] -> EvalMonad Expr
 getProp props = do
     obj <- fmap getObject get
     lift $ getPropFromObj props $ Obj obj
@@ -171,7 +210,7 @@ getProp props = do
     --          Just val -> Right val
     --          Nothing -> Left $ NO_SUCH_PROP prop
 
-getPropFromObj :: [String] -> Expr -> Either PropError Expr
+getPropFromObj :: [ObjKey] -> Expr -> Either PropError Expr
 getPropFromObj (prop:subprops) (Obj obj) = do
     let mVal = Map.lookup prop obj
     val <- case mVal of
@@ -183,20 +222,20 @@ getPropFromObj (prop:subprops) (Obj obj) = do
 getPropFromObj (prop:subprops) _ =
     Left $ NO_SUCH_PROP prop
 getPropFromObj [] _ =
-    Left $ NO_SUCH_PROP "[]"
+    Left $ NO_SUCH_PROP $ StrKey "[]"
 
 
 -- | Evaluates a property and returns it's value, using 
 -- the supplied getter
 evalProp :: (LiteralType a)
-         => [String] -- ^ The name of the property
+         => [ObjKey] -- ^ The name of the property
          -> Object -- ^ The object to evaluate
          -> (Either PropError) a -- ^ The result
 evalProp path obj =
     evalStateT ((getProp path) >>= fromExpr) (makeEvalState obj)
 
 -- | Evaluates a property coercing its value into a string
-evalPropString :: [String]
+evalPropString :: [ObjKey]
                -> Object
                -> (Either PropError) String
 evalPropString path obj = 
@@ -208,7 +247,7 @@ evalPropString path obj =
 
 defaultProp :: (LiteralType a)
             => a
-            -> [String]
+            -> [ObjKey]
             -> Object
             -> a
 defaultProp def path obj = 
@@ -231,13 +270,13 @@ eval expr =
     case expr of
         (Decl prop propExpr) -> do
             propExpr' <- eval propExpr
-            setPropM prop propExpr'
+            setPropM (fmap StrKey prop) propExpr'
 
         (Set prop propExpr) -> do
             propExpr' <- eval propExpr
-            setPropM prop propExpr'
+            setPropM (fmap StrKey prop) propExpr'
 
-        (Get prop) -> getProp prop
+        (Get prop) -> getProp (fmap StrKey prop)
 
         (If cond expr1 expr2) -> do
             boolVal <- fromExpr cond

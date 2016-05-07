@@ -4,6 +4,7 @@ import Text.ParserCombinators.Parsec
 import Control.Applicative hiding (many, (<|>))
 import Data.Map.Strict ()
 import qualified Data.Map.Strict as Map
+import Data.Foldable (foldl')
 
 import HogueScript.Object
 
@@ -116,17 +117,42 @@ expression :: Parser Expr
 expression = choice [object, ifexpr, notexpr, failexpr, litExpr,
                     funapp, fundec, declaration, assignment, retrieval]
 
-propmap :: Parser (String, Expr)
-propmap = (,) <$> identifier
+-- A Property mapping eg propname : "value"
+propmap :: Parser (ObjKey, Expr)
+propmap = try $ mkPropMap <$> identifier
                 <*> (spaces *> (char ':') *> spaces *> expression)
+    where mkPropMap ident expr = (StrKey ident, expr)
+
+-- A Property mapping from number to value eg 4: "value"
+propnum :: Parser (ObjKey, Expr)
+propnum = try $ mkPropNum <$> integer
+                <*> (spaces *> (char ':') *> spaces *> expression)
+    where mkPropNum n expr = (NumKey $ read n, expr)
+
+-- A Propery where no key is specified, eg a list
+nullprop :: Parser (ObjKey, Expr)
+nullprop = try $ ((,) NullKey) <$> expression
+    --where mkNullProp expr = (NullKey, expr)
 
 object :: Parser Expr
-object = try $ mkobj <$> ((char '{') *> spaces *> many1 (propmap <* spaces)
+object = try $ mkObj <$> ((char '{') *> spaces *>
+                         many1 ((choice [propmap, propnum, nullprop]) <* spaces)
                           <* (char '}'))
   where
-    mkobj props = Obj $ Map.fromList props
+    mkObj props = Obj $ fst
+                     $ foldl' (\(map,index) (prop,expr) -> 
+                            case prop of
+                              NullKey -> (Map.insert (NumKey index) expr map, 
+                                            index + 1)
+                              NumKey n -> (Map.insert (NumKey n) expr map,
+                                            n + 1)
+                              StrKey s -> (Map.insert (StrKey s) expr map,
+                                            index)) 
+                          (Map.empty, 0) props
 
-propfile :: Parser [(String, Expr)]
+    --mkobj props = Obj $ Map.fromList props
+
+propfile :: Parser [(ObjKey, Expr)]
 propfile = (spaces) *> (propmap `endBy` (spaces))
 
 -- parseFromFile propfile "data/objects"
