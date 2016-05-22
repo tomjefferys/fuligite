@@ -10,6 +10,7 @@ module HogueScript.Object
   setProp,
   setProps,
   mkObj,
+  defaultEnv,
   makeEvalState,
   eval,
   EvalState(..),
@@ -20,8 +21,10 @@ module HogueScript.Object
 ) where
 
 import Data.Map.Strict (Map)
+import Data.Either (either)
 import qualified Data.Map.Strict as Map
-import Control.Monad.State
+import Control.Monad.State.Strict
+import Debug.Trace
 
 data Type = BOOL | CHAR | STRING | INT | FLOAT | OBJECT
             deriving (Show, Eq)
@@ -45,20 +48,41 @@ toString lit =
         I i -> show i
         F f -> show f
 
+-- Type for a builtin function
+-- Takes a name and the function itself
+data BuiltIn = BuiltIn String ([Expr] -> EvalMonad Expr)
+
+instance Ord BuiltIn where
+    compare (BuiltIn name1 _) (BuiltIn name2 _) = 
+        compare name1 name2
+
+instance Eq BuiltIn where
+    (BuiltIn name1 _) == (BuiltIn name2 _) = name1 == name2 
+
+instance Show BuiltIn where
+    show (BuiltIn name _) = name
+
+-- function to declare a variable
+-- (var name expr)
+fnVar :: [Expr] -> EvalMonad Expr
+fnVar [name,value] = do
+    env <- fmap getEnv get
+    obj <- fmap getObject get
+    fl <- fmap failure get
+    let env' = case name of
+            (Get [identifier]) -> Map.insert (StrKey identifier) value env
+            _ -> env
+    put $ EvalState env' obj fl
+    return value
+
 
 -- Represents components of an expression
 data Expr = Lit Literal |
             Obj Object |
-            Decl [String] Expr | 
-            Set [String] Expr | -- return the old value
             Get [String] |
-            If Expr Expr Expr |
-            Fapp String [Expr] | -- Function application
-            Fdec [String] Expr | -- Function declaration
-            Do Expr Expr | -- Run both expressions, but return from second
-        --    Do [Expr] |
-            Fail String |
-            Not Expr |
+            Fapp [String] [Expr] | -- ^ Function application
+            Fn [String] Expr |   -- ^ Function
+            HFn BuiltIn | -- ^ A builtin function
             Null 
             deriving (Ord, Eq, Show)
 
@@ -139,12 +163,23 @@ type Object = Map ObjKey Expr
 -- basic type is ObjZipper [] Object
 data ObjZipper = ObjZipper [(Object, ObjKey)] Expr
 
+getZipperExpr :: ObjZipper -> Expr
+getZipperExpr (ObjZipper _ expr) = expr
+
 getField :: ObjZipper -> ObjKey -> Either PropError ObjZipper
 getField (ObjZipper path expr) field = 
     case expr of
-      (Obj obj) -> Right $ ObjZipper ((obj,field):path) $
-                            Map.findWithDefault Null field obj
+      (Obj obj) -> case Map.lookup field obj of
+                     Just result -> Right $ ObjZipper ((obj,field):path) result
+                     Nothing -> Left $ NO_SUCH_PROP field
       _ -> Left $ NO_SUCH_PROP field
+
+getPath :: ObjZipper -> [ObjKey] -> Either PropError ObjZipper
+getPath zipper [] = Right zipper
+getPath zipper (field:path) = do
+    zipper' <- getField zipper field
+    getPath zipper' path
+    
 
 collapse :: ObjZipper -> ObjZipper
 collapse (ObjZipper [] expr) = ObjZipper [] expr
@@ -152,13 +187,39 @@ collapse (ObjZipper ((obj,field):path) expr) =
     collapse $
         ObjZipper path $ Obj $ Map.insert field expr obj
 
+-- Try to lookup a variable in an object
+--lookup :: [ObjKey] -- ^ The path we want to find
+--       -> Object   -- ^ The object to inspect
+--       -> Either PropError ObjZipper -- Either error, or Zipper
+--lookup path obj = getPath (ObjZipper [] (Obj obj)) path
 
+lookupPath :: [ObjKey] -> EvalMonad (Either PropError ObjZipper)
+lookupPath path = do
+    obj <- fmap getObject get
+    env <- fmap getEnv get
+    let objResult = getPath (ObjZipper [] (Obj obj)) path
+    let envResult = getPath (ObjZipper [] (Obj env)) path
+    return $ either (const envResult) Right objResult
 
+doFunc :: Expr -> EvalMonad Expr
+doFunc (Fapp path expr) = do
+    -- lookup name, first in obj, then env
+    fun <- lookupPath $ fmap StrKey path
+    let fn = case fun of
+                Right (ObjZipper _ (HFn (BuiltIn _ fn))) -> fn
+                _ -> undefined
 
+    fn expr
+    --result <- fn expr
+    --return result
+    --return Null
+
+    
 
 -- The state of evaluation of a property expression
 data EvalState = EvalState {
-                    getObject ::Object,
+                    getEnv :: Object,
+                    getObject :: Object,
                     failure :: Maybe String }
 
 -- The Monad stack used when evaluating expressions
@@ -170,9 +231,12 @@ logFailure str evalSt = evalSt { failure = Just str }
 setPropMap ::Object -> EvalState -> EvalState
 setPropMap propMap evalSt = evalSt { getObject = propMap }
 
-makeEvalState ::Object -> EvalState
-makeEvalState propMap = 
-    EvalState propMap Nothing
+makeEvalState :: Object -> Object -> EvalState
+makeEvalState env obj = 
+    EvalState env obj Nothing
+
+defaultEnv :: Object
+defaultEnv = Map.fromList [(StrKey "var", HFn $ BuiltIn "var" fnVar)] --Map.empty
 
 -- | Set a property to an expression.
 setPropM :: [ObjKey] -> Expr -> EvalMonad Expr
@@ -229,17 +293,19 @@ getPropFromObj [] _ =
 -- the supplied getter
 evalProp :: (LiteralType a)
          => [ObjKey] -- ^ The name of the property
+         -> Object -- ^ The environment
          -> Object -- ^ The object to evaluate
          -> (Either PropError) a -- ^ The result
-evalProp path obj =
-    evalStateT ((getProp path) >>= fromExpr) (makeEvalState obj)
+evalProp path env obj =
+    evalStateT ((getProp path) >>= fromExpr) (makeEvalState env obj)
 
 -- | Evaluates a property coercing its value into a string
 evalPropString :: [ObjKey]
                -> Object
+               -> Object
                -> (Either PropError) String
-evalPropString path obj = 
-    evalStateT ((getProp path) >>= evalToString) (makeEvalState obj)
+evalPropString path env obj = 
+    evalStateT ((getProp path) >>= evalToString) (makeEvalState env obj)
   where
     evalToString :: Expr -> EvalMonad String
     evalToString (Lit l) = return $ toString l
@@ -249,9 +315,10 @@ defaultProp :: (LiteralType a)
             => a
             -> [ObjKey]
             -> Object
+            -> Object
             -> a
-defaultProp def path obj = 
-    let result = evalProp path obj 
+defaultProp def path env obj = 
+    let result = evalProp path env obj 
     in case result of 
         Right val -> val
         Left _ -> def
@@ -264,55 +331,18 @@ failExpr :: String -> EvalMonad Expr
 failExpr str = do
     modify $ logFailure str
     return Null
-    
+
 eval :: Expr -> EvalMonad Expr
 eval expr = 
     case expr of
-        (Decl prop propExpr) -> do
-            propExpr' <- eval propExpr
-            setPropM (fmap StrKey prop) propExpr'
-
-        (Set prop propExpr) -> do
-            propExpr' <- eval propExpr
-            setPropM (fmap StrKey prop) propExpr'
-
-        (Get prop) -> getProp (fmap StrKey prop)
-
-        (If cond expr1 expr2) -> do
-            boolVal <- fromExpr cond
-            if (boolVal)
-              then (eval expr1)
-              else (eval expr2)
-
-        (Not notExpr) -> do
-            boolVal <- fromExpr notExpr
-            return $ if (boolVal)
-              then (Lit $ B False)
-              else (Lit $ B True)
-
-        (Fail mssg) -> failExpr mssg
-        
+        --(Get prop) -> getProp (fmap StrKey prop)
+        (Get prop) -> do
+            result <- lookupPath (fmap StrKey prop)
+            return $ case result of
+                        Right zipper -> getZipperExpr zipper
+                        Left _ -> Null
         (Null) -> return Null
-
         (Lit l) -> return $ Lit l
-
         (Obj o) -> return $ Obj o
+        (Fapp path expr) -> doFunc (Fapp path expr)
                 
--- Replace code with function calling
--- | Sends a message to an object, returning a new object
--- if the object has changes.
--- Returns an Either Maybe where
---   Right Just obj = message handled
---   Right Nothing = message non handled
---   Left mssg = message handling failed
---sendMssg :: Message -> Object -> Either String (Maybe Object)
---sendMssg mssg obj = do
---    let  mExpr = Map.lookup (show mssg) obj
---    case mExpr of
---      Nothing -> Right Nothing
---      Just expr -> do
---        let (Right (_, evalState')) = runStateT (eval expr) (makeEvalState obj)
---        case failure evalState' of
---              Nothing -> Right $ Just $ getObject evalState'
---              Just failmssg -> Left failmssg
-

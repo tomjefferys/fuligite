@@ -70,52 +70,17 @@ path = (:) <$> identifier
            <*> many (choice [(char '.') *> identifier, 
                              (char '[' *> quotedString <* (char ']'))])
 
---pathIndex :: Parser [String]
---pathIndex = try $ mkLst <$> path <*> ((char '[') *> quotedString <* (char ']'))
---  where
---    mkLst lst extra = lst ++ [extra]
---
---path :: Parser [String]
---path = choice [simplePath] --, pathIndex]
-
-declaration :: Parser Expr
-declaration = try $ Decl <$> (string "var" *> spaces *> path)
-                        <*> (spaces *> (char '=') *> spaces *> expression)
-
-assignment :: Parser Expr
-assignment = try $ Set <$> path
-                    <*> (spaces *> (char '=') *> spaces *> expression)
-
 retrieval :: Parser Expr
 retrieval = try $ Get <$> path
-
-ifexpr :: Parser Expr
-ifexpr = try $ makeif <$> ((string "if") *> spaces *> expression)
-                      <*> (spaces *> (string "then") *> spaces *> expression)
-                      <*> (spaces *> (string "else") *> spaces *> expression)
-  where
-    makeif cond expr1 expr2 = If cond expr1 expr2
-
-notexpr :: Parser Expr
-notexpr = try $ Not <$> ((string "not") *> spaces *> expression)
-
-failexpr :: Parser Expr
-failexpr = try $ Fail <$> ((string "fail") *> spaces *> quotedString)
 
 -- function application
 funapp :: Parser Expr
 funapp = try $
-        Fapp <$> (char '(' *> spaces *> identifier)
+        Fapp <$> (char '(' *> spaces *> path)
              <*> (spaces *> many (expression <* spaces) <* char ')')
 
--- function declaration
-fundec :: Parser Expr
-fundec = try $ Fdec <$> ((string "fn") *> spaces *> many (identifier <* spaces))
-                    <*> (spaces *> string "->" *> spaces *> expression)
-
 expression :: Parser Expr
-expression = choice [object, ifexpr, notexpr, failexpr, litExpr,
-                    funapp, fundec, declaration, assignment, retrieval]
+expression = choice [object, litExpr, funapp, retrieval]
 
 -- A Property mapping eg propname : "value"
 propmap :: Parser (ObjKey, Expr)

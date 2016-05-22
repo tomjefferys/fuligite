@@ -4,35 +4,35 @@ import HogueScript.ObjectParser
 import HogueScript.Object
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.State
+import Control.Monad.State.Strict
 import Text.ParserCombinators.Parsec
 
 
 main :: IO ()
-main = run mkObj
+main = run $ makeEvalState defaultEnv mkObj 
 
-run :: Object -> IO ()
-run obj = do
+run :: EvalState -> IO ()
+run st = do
     line <- getLine
-    obj' <- 
+    st' <- 
         case parse expression "NOPE" line of
           Left err -> do
             print err
-            return obj
+            return st
           Right exp -> do
             print exp
-            let result = evaluate exp obj
+            let result = evaluate exp st
             case result of
               Left error -> do
                 print error
-                return obj
-              Right (expr', st') -> do
+                return st
+              Right (expr', newState) -> do
                 print expr'
-                return $ getObject st'
+                return newState
 
 
-    when (line /= "") $ run obj'
+    when (line /= "") $ run st'
 
 
-evaluate :: Expr -> Object -> Either PropError (Expr, EvalState)
-evaluate expr obj = runStateT (eval expr) (makeEvalState obj)
+evaluate :: Expr -> EvalState -> Either PropError (Expr, EvalState)
+evaluate expr st = runStateT (eval expr) st
