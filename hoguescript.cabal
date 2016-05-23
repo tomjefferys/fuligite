@@ -48,7 +48,9 @@ cabal-version:       >=1.10
 
 library
   -- Modules exported by the library.
-  exposed-modules:  HogueScript.Object, HogueScript.ObjectParser, HogueScript.REPL
+  exposed-modules:  HogueScript.Object, HogueScript.ObjectParser, HogueScript.REPL,
+                    HogueScript.Literal, HogueScript.LiteralType, HogueScript.Expr,
+                    HogueScript.Eval
   
   -- Modules included in this library but not exported.
   -- other-modules:       

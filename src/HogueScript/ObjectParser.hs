@@ -7,6 +7,9 @@ import qualified Data.Map.Strict as Map
 import Data.Foldable (foldl')
 
 import HogueScript.Object
+import HogueScript.Literal
+import HogueScript.Expr
+import HogueScript.ObjKey
 
 litBool :: Parser Literal
 litBool = getBool <$> choice [string "true", string "false"]

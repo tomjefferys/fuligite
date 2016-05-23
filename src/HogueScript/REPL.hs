@@ -6,6 +6,9 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.State.Strict
 import Text.ParserCombinators.Parsec
+import HogueScript.Eval
+import HogueScript.Expr
+import HogueScript.Functions
 
 
 main :: IO ()
