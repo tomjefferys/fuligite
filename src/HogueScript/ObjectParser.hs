@@ -6,7 +6,6 @@ import Data.Map.Strict ()
 import qualified Data.Map.Strict as Map
 import Data.Foldable (foldl')
 
-import HogueScript.Object
 import HogueScript.Literal
 import HogueScript.Expr
 import HogueScript.ObjKey
@@ -22,7 +21,7 @@ litChar :: Parser Literal
 litChar = C <$> (char '\'' *> anyChar <* char '\'')
 
 quotedString :: Parser String
-quotedString = (char '"' *> many (noneOf ("\"")) <* char '"')
+quotedString = char '"' *> many (noneOf "\"") <* char '"'
 
 litString :: Parser Literal
 litString = S <$> quotedString
@@ -51,7 +50,7 @@ float :: Parser String
 float = try $ integer <++> (char '.' <:> number)
 
 litInt :: Parser Literal
-litInt = (I . read) <$> integer <* (notFollowedBy $ char '.')
+litInt = (I . read) <$> integer <* notFollowedBy (char '.')
 
 litFloat :: Parser Literal
 litFloat = (F . read) <$> float
@@ -68,10 +67,10 @@ identifier = letter <:> many alphaNum
 --simplePath :: Parser [String]
 --simplePath = try $ (:) <$> identifier <*> many ((char '.') *> identifier)
 
-
+path :: Parser [String]
 path = (:) <$> identifier
-           <*> many (choice [(char '.') *> identifier, 
-                             (char '[' *> quotedString <* (char ']'))])
+           <*> many (choice [char '.' *> identifier, 
+                             char '[' *> quotedString <* char ']'])
 
 retrieval :: Parser Expr
 retrieval = try $ Get <$> path
@@ -88,40 +87,40 @@ expression = choice [object, litExpr, funapp, retrieval]
 -- A Property mapping eg propname : "value"
 propmap :: Parser (ObjKey, Expr)
 propmap = try $ mkPropMap <$> identifier
-                <*> (spaces *> (char ':') *> spaces *> expression)
+                <*> (spaces *> char ':' *> spaces *> expression)
     where mkPropMap ident expr = (StrKey ident, expr)
 
 -- A Property mapping from number to value eg 4: "value"
 propnum :: Parser (ObjKey, Expr)
 propnum = try $ mkPropNum <$> integer
-                <*> (spaces *> (char ':') *> spaces *> expression)
+                <*> (spaces *> char ':' *> spaces *> expression)
     where mkPropNum n expr = (NumKey $ read n, expr)
 
 -- A Propery where no key is specified, eg a list
 nullprop :: Parser (ObjKey, Expr)
-nullprop = try $ ((,) NullKey) <$> expression
+nullprop = try $ (,) NullKey <$> expression
     --where mkNullProp expr = (NullKey, expr)
 
 object :: Parser Expr
-object = try $ mkObj <$> ((char '{') *> spaces *>
-                         many1 ((choice [propmap, propnum, nullprop]) <* spaces)
-                          <* (char '}'))
+object = try $ mkObj <$> (char '{' *> spaces *>
+                         many1 (choice [propmap, propnum, nullprop] <* spaces)
+                          <* char '}')
   where
     mkObj props = Obj $ fst
-                     $ foldl' (\(map,index) (prop,expr) -> 
+                     $ foldl' (\(mp,index) (prop,expr) -> 
                             case prop of
-                              NullKey -> (Map.insert (NumKey index) expr map, 
+                              NullKey -> (Map.insert (NumKey index) expr mp, 
                                             index + 1)
-                              NumKey n -> (Map.insert (NumKey n) expr map,
+                              NumKey n -> (Map.insert (NumKey n) expr mp,
                                             n + 1)
-                              StrKey s -> (Map.insert (StrKey s) expr map,
+                              StrKey s -> (Map.insert (StrKey s) expr mp,
                                             index)) 
                           (Map.empty, 0) props
 
     --mkobj props = Obj $ Map.fromList props
 
 propfile :: Parser [(ObjKey, Expr)]
-propfile = (spaces) *> (propmap `endBy` (spaces))
+propfile = spaces *> (propmap `endBy` spaces)
 
 -- parseFromFile propfile "data/objects"
 

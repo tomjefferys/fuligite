@@ -1,7 +1,6 @@
 -- | Built in functions 
 module HogueScript.Functions where
 
-import HogueScript.Eval
 import HogueScript.Expr
 import HogueScript.ObjKey
 
@@ -23,3 +22,5 @@ fnVar [name,value] = do
             _ -> env
     put $ EvalState env' obj fl
     return value
+fnVar _ = error "Illegal argument passed to var"
+

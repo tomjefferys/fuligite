@@ -1,6 +1,6 @@
+-- | A simple zipper to access properties in nested objects
 module HogueScript.ObjZipper where
 
-import HogueScript.Object
 import HogueScript.Expr
 import HogueScript.ObjKey
 import qualified Data.Map.Strict as Map

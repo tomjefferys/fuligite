@@ -19,20 +19,19 @@ eval expr =
         (Null) -> return Null
         (Lit l) -> return $ Lit l
         (Obj o) -> return $ Obj o
-        (Fapp path expr) -> doFunc (Fapp path expr)
+        (Fapp path args) -> doFunc (Fapp path args)
+        _ -> undefined
 
 doFunc :: Expr -> EvalMonad Expr
-doFunc (Fapp path expr) = do
+doFunc (Fapp path args) = do
     -- lookup name, first in obj, then env
     fun <- lookupPath $ fmap StrKey path
     let fn = case fun of
-                Right (ObjZipper _ (HFn (BuiltIn _ fn))) -> fn
+                Right (ObjZipper _ (HFn (BuiltIn _ fn'))) -> fn'
                 _ -> undefined
 
-    fn expr
-    --result <- fn expr
-    --return result
-    --return Null
+    fn args
+doFunc _ = error "Can't call doFunc on non function"
 
 lookupPath :: [ObjKey] -> EvalMonad (Either PropError ObjZipper)
 lookupPath path = do
@@ -47,12 +46,13 @@ logFailure str evalSt = evalSt { failure = Just str }
 
 -- | Set a property to an expression.
 setPropM :: [ObjKey] -> Expr -> EvalMonad Expr
-setPropM (propName:[]) value = do
+setPropM [propName] value = do
     propMap <- fmap getObject get
     let oldExpr = Map.findWithDefault Null propName propMap
     let propMap' = Map.insert propName value propMap
     modify (setPropMap propMap')
     return oldExpr
+setPropM _ _ = error "setPropM must be supplied with a value"
 
 setPropMap ::Object -> EvalState -> EvalState
 setPropMap propMap evalSt = evalSt { getObject = propMap }
@@ -62,15 +62,6 @@ makeEvalState env obj =
     EvalState env obj Nothing
 
 
--- | Evaluates a property and returns it's value, using 
--- the supplied getter
-evalProp :: (LiteralType a)
-         => [ObjKey] -- ^ The name of the property
-         -> Object -- ^ The environment
-         -> Object -- ^ The object to evaluate
-         -> (Either PropError) a -- ^ The result
-evalProp path env obj =
-    evalStateT ((getProp path) >>= fromExpr) (makeEvalState env obj)
 
 -- | Evaluates a property coercing its value into a string
 evalPropString :: [ObjKey]
@@ -78,24 +69,11 @@ evalPropString :: [ObjKey]
                -> Object
                -> (Either PropError) String
 evalPropString path env obj = 
-    evalStateT ((getProp path) >>= evalToString) (makeEvalState env obj)
+    evalStateT (getProp path >>= evalToString) (makeEvalState env obj)
   where
     evalToString :: Expr -> EvalMonad String
     evalToString (Lit l) = return $ toString l
     evalToString expr = eval expr >>= evalToString
-
-defaultProp :: (LiteralType a)
-            => a
-            -> [ObjKey]
-            -> Object
-            -> Object
-            -> a
-defaultProp def path env obj = 
-    let result = evalProp path env obj 
-    in case result of 
-        Right val -> val
-        Left _ -> def
-
 
 
 -- | Log a failure.  Not an error in the code, but 

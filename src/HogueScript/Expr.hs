@@ -50,7 +50,3 @@ data PropError = BAD_TYPE Type --Type
                  | TRACE Expr PropError
                  deriving (Show, Eq)
 
--- | Represents something that can be coerced into an expression
-class LiteralType a where
-    getExpr :: a -> Expr
-    fromExpr :: Expr -> EvalMonad a
