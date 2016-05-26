@@ -27,8 +27,10 @@ getPath zipper (field:path) = do
     getPath zipper' path
     
 
-collapse :: ObjZipper -> ObjZipper
-collapse (ObjZipper [] expr) = ObjZipper [] expr
+--collapse :: ObjZipper -> ObjZipper
+collapse :: ObjZipper -> Expr
+--collapse (ObjZipper [] expr) = ObjZipper [] expr
+collapse (ObjZipper [] expr) = expr
 collapse (ObjZipper ((obj,field):path) expr) = 
     collapse $
         ObjZipper path $ Obj $ Map.insert field expr obj

@@ -48,5 +48,6 @@ data Type = BOOL | CHAR | STRING | INT | FLOAT | OBJECT
 data PropError = BAD_TYPE Type --Type
                  | NO_SUCH_PROP ObjKey
                  | TRACE Expr PropError
+                 | MSSG String
                  deriving (Show, Eq)
 
