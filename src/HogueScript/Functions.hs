@@ -12,7 +12,8 @@ import Control.Monad.State.Strict
 defaultEnv :: Object
 defaultEnv = Map.fromList [
       (StrKey "var", HFn $ BuiltIn "var" fnVar),
-      (StrKey "set", HFn $ BuiltIn "set" fnSet)]
+      (StrKey "set", HFn $ BuiltIn "set" fnSet),
+      (StrKey "do", HFn $ BuiltIn "do" fnDo)]
 
 -- function to declare a variable
 -- (var name expr)
@@ -32,18 +33,25 @@ fnVar _ = error "Illegal argument passed to var"
 -- (set expr expr)
 fnSet :: [Expr] -> EvalMonad Expr
 fnSet [name, value] = do
-    env <- fmap getEnv get
-    obj <- fmap getObject get
-    fl <- fmap failure get
+    st <- get
     eZipper <- 
           case name of
+            -- FIXME lookup path could return an obj path
             (Get path) -> lookupPath $ fmap StrKey path
             _ -> return $ Left $ MSSG "blah"
     let (Obj env') = case eZipper of 
                   Right (ObjZipper zpath _) -> collapse $ ObjZipper zpath value
-                  Left _ -> Obj env
-    put $ EvalState env' obj fl
+                  Left _ -> Obj $ getEnv st
+    put $ st { getEnv = env' }
     return value
 fnSet _ = error "Illegal argument passed to set"
+
+fnDo :: [Expr] -> EvalMonad Expr
+fnDo (expr:[]) = eval expr
+fnDo (expr:exprs) = do
+    _ <- eval expr
+    fnDo exprs
+fnDo _ = error "Illegal argument passed to do"
+    
 
     
