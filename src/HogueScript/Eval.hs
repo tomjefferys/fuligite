@@ -4,7 +4,7 @@ import HogueScript.Expr
 import HogueScript.Literal
 import HogueScript.ObjZipper
 import HogueScript.ObjKey
-import HogueScript.Object
+--import HogueScript.Object
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 
@@ -75,6 +75,25 @@ evalPropString path env obj =
     evalToString (Lit l) = return $ toString l
     evalToString expr = eval expr >>= evalToString
 
+-- | Get the expression associated with a property
+getProp :: [ObjKey] -> EvalMonad Expr
+getProp props = do
+    obj <- fmap getObject get
+    lift $ getPropFromObj props $ Obj obj
+
+getPropFromObj :: [ObjKey] -> Expr -> Either PropError Expr
+getPropFromObj (prop:subprops) (Obj obj) = do
+    let mVal = Map.lookup prop obj
+    val <- case mVal of
+            Just val -> Right val
+            Nothing -> Left $ NO_SUCH_PROP prop
+    case subprops of
+      [] -> Right val
+      _ -> getPropFromObj subprops val
+getPropFromObj (prop:_) _ =
+    Left $ NO_SUCH_PROP prop
+getPropFromObj [] _ =
+    Left $ NO_SUCH_PROP $ StrKey "[]"
 
 -- | Log a failure.  Not an error in the code, but 
 -- an expected failure (eg trying to open an open door)
