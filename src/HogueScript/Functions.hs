@@ -19,13 +19,12 @@ defaultEnv = Map.fromList [
 -- (var name expr)
 fnVar :: [Expr] -> EvalMonad Expr
 fnVar [name,value] = do
-    env <- fmap getEnv get
-    obj <- fmap getObject get
-    fl <- fmap failure get
+    st <- get
+    let env = getEnv st
     let env' = case name of
             (Get [identifier]) -> Map.insert (StrKey identifier) value env
             _ -> env
-    put $ EvalState env' obj fl
+    put $ st { getEnv = env' }
     return value
 fnVar _ = error "Illegal argument passed to var"
 
@@ -34,18 +33,23 @@ fnVar _ = error "Illegal argument passed to var"
 fnSet :: [Expr] -> EvalMonad Expr
 fnSet [name, value] = do
     st <- get
-    eZipper <- 
-          case name of
-            -- FIXME lookup path could return an obj path
-            (Get path) -> lookupPath $ fmap StrKey path
-            _ -> return $ Left $ MSSG "blah"
-    let (Obj env') = case eZipper of 
-                  Right (ObjZipper zpath _) -> collapse $ ObjZipper zpath value
-                  Left _ -> Obj $ getEnv st
-    put $ st { getEnv = env' }
+    zipper <- case name of
+                (Get path) -> lookupPath $ fmap StrKey path
+                _ -> return $ Left $ MSSG "Not a path"
+    put $ either (const st) (doSet st value) zipper
     return value
+  where
+    doSet :: EvalState -> Expr -> ObjZipper -> EvalState
+    doSet st val zipper = 
+      let zipper' = setZipperExpr zipper val
+          (setter, expr) = collapse zipper'
+      in case expr of
+           (Obj obj) -> setter obj st 
+           _ -> error "collapse should return an object"
 fnSet _ = error "Illegal argument passed to set"
 
+-- function to execute multiple functions
+-- (do expr1 expr2 expr3)
 fnDo :: [Expr] -> EvalMonad Expr
 fnDo (expr:[]) = eval expr
 fnDo (expr:exprs) = do

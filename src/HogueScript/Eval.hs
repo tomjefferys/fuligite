@@ -4,10 +4,10 @@ import HogueScript.Expr
 import HogueScript.Literal
 import HogueScript.ObjZipper
 import HogueScript.ObjKey
---import HogueScript.Object
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 
+-- | Evaluate an expression
 eval :: Expr -> EvalMonad Expr
 eval expr = 
     case expr of
@@ -27,41 +27,55 @@ doFunc (Fapp path args) = do
     -- lookup name, first in obj, then env
     fun <- lookupPath $ fmap StrKey path
     let fn = case fun of
-                Right (ObjZipper _ (HFn (BuiltIn _ fn'))) -> fn'
-                _ -> undefined
-
+                Right (ObjZipper _ _ (HFn (BuiltIn _ fn'))) -> fn'
+                _ -> error ("unknown function" ++ show path)
     fn args
 doFunc _ = error "Can't call doFunc on non function"
 
-lookupPath :: [ObjKey] -> EvalMonad (Either PropError ObjZipper)
+
+setEnv :: StateSetter
+setEnv obj st = st { getEnv = obj }
+
+setObj :: StateSetter
+setObj obj st = st { getObject = obj }
+
+-- | Lookups up a path
+-- Checks in the local object, then in the environment
+lookupPath :: [ObjKey] -- ^ The path
+           -> EvalMonad (Either PropError ObjZipper)
 lookupPath path = do
     obj <- fmap getObject get
     env <- fmap getEnv get
-    let objResult = getPath (ObjZipper [] (Obj obj)) path
-    let envResult = getPath (ObjZipper [] (Obj env)) path
+    let objResult = getPath (ObjZipper setObj [] (Obj obj)) path
+    let envResult = getPath (ObjZipper setEnv [] (Obj env)) path
     return $ either (const envResult) Right objResult
 
-logFailure :: String -> EvalState -> EvalState
+-- | Logs a failure in the state
+logFailure :: String    -- ^ The failure message
+           -> EvalState -- ^ The current state
+           -> EvalState -- ^ The updated state
 logFailure str evalSt = evalSt { failure = Just str }
 
--- | Set a property to an expression.
+-- | Set a property of the local object to an expression.
 setPropM :: [ObjKey] -> Expr -> EvalMonad Expr
 setPropM [propName] value = do
     propMap <- fmap getObject get
     let oldExpr = Map.findWithDefault Null propName propMap
     let propMap' = Map.insert propName value propMap
-    modify (setPropMap propMap')
+    modify (setObject propMap')
     return oldExpr
 setPropM _ _ = error "setPropM must be supplied with a value"
 
-setPropMap ::Object -> EvalState -> EvalState
-setPropMap propMap evalSt = evalSt { getObject = propMap }
+-- | sets the local object
+setObject :: Object -> EvalState -> EvalState
+setObject propMap evalSt = evalSt { getObject = propMap }
 
-makeEvalState :: Object -> Object -> EvalState
+-- | Constructs an evaluation state
+makeEvalState :: Object     -- ^ The environment
+              -> Object     -- ^ The local object
+              -> EvalState  -- ^ Returns a new EvalState
 makeEvalState env obj = 
     EvalState env obj Nothing
-
-
 
 -- | Evaluates a property coercing its value into a string
 evalPropString :: [ObjKey]

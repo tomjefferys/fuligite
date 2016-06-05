@@ -5,18 +5,27 @@ import HogueScript.Expr
 import HogueScript.ObjKey
 import qualified Data.Map.Strict as Map
 
+type StateSetter = Object -> EvalState -> EvalState
+
 -- A zipper for Objects
 -- basic type is ObjZipper [] Object
-data ObjZipper = ObjZipper [(Object, ObjKey)] Expr
+data ObjZipper = ObjZipper
+                     StateSetter
+                     [(Object, ObjKey)] Expr
 
 getZipperExpr :: ObjZipper -> Expr
-getZipperExpr (ObjZipper _ expr) = expr
+getZipperExpr (ObjZipper _ _ expr) = expr
+
+setZipperExpr :: ObjZipper -> Expr -> ObjZipper
+setZipperExpr (ObjZipper setter path _) expr = 
+                (ObjZipper setter path expr)
 
 getField :: ObjZipper -> ObjKey -> Either PropError ObjZipper
-getField (ObjZipper path expr) field = 
+getField (ObjZipper updater path expr) field = 
     case expr of
       (Obj obj) -> case Map.lookup field obj of
-                     Just result -> Right $ ObjZipper ((obj,field):path) result
+                     Just result -> Right
+                             $ ObjZipper updater ((obj,field):path) result
                      Nothing -> Left $ NO_SUCH_PROP field
       _ -> Left $ NO_SUCH_PROP field
 
@@ -27,8 +36,8 @@ getPath zipper (field:path) = do
     getPath zipper' path
     
 
-collapse :: ObjZipper -> Expr
-collapse (ObjZipper [] expr) = expr
-collapse (ObjZipper ((obj,field):path) expr) = 
+collapse :: ObjZipper -> (StateSetter, Expr)
+collapse (ObjZipper updater [] expr) = (updater,expr)
+collapse (ObjZipper updater ((obj,field):path) expr) = 
     collapse $
-        ObjZipper path $ Obj $ Map.insert field expr obj
+        ObjZipper updater path $ Obj $ Map.insert field expr obj

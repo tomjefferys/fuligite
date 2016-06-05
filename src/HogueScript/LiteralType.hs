@@ -7,7 +7,6 @@ import HogueScript.Literal
 import Control.Monad.State.Strict
 import HogueScript.Eval
 import HogueScript.ObjKey
---import HogueScript.Object
 
 -- | Represents something that can be coerced into an expression
 class LiteralType a where

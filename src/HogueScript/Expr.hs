@@ -5,8 +5,6 @@ import HogueScript.ObjKey
 import Data.Map.Strict
 import Control.Monad.State.Strict
 
-
-
 -- The map of properties for an entity
 type Object = Map ObjKey Expr
 
