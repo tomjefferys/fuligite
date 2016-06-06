@@ -4,16 +4,20 @@ module HogueScript.Functions where
 import HogueScript.Expr
 import HogueScript.ObjKey
 import HogueScript.Eval
+import HogueScript.Expr
 import HogueScript.ObjZipper
+import HogueScript.Literal
 
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
+import Control.Monad (foldM)
 
 defaultEnv :: Object
 defaultEnv = Map.fromList [
       (StrKey "var", HFn $ BuiltIn "var" fnVar),
       (StrKey "set", HFn $ BuiltIn "set" fnSet),
-      (StrKey "do", HFn $ BuiltIn "do" fnDo)]
+      (StrKey "do", HFn $ BuiltIn "do" fnDo),
+      (StrKey "+", HFn $ BuiltIn "+" fnSum)]
 
 -- function to declare a variable
 -- (var name expr)
@@ -56,6 +60,21 @@ fnDo (expr:exprs) = do
     _ <- eval expr
     fnDo exprs
 fnDo _ = error "Illegal argument passed to do"
-    
+
+-- Sum function, adds up arguments
+fnSum :: [Expr] -> EvalMonad Expr
+fnSum exprs = do
+    nums <- mapM getInt exprs
+    let result = foldr (+) 0 nums
+    return $ Lit $ I result
+   -- foldM (\acc n -> acc + getInt n) 1 exprs
+  where
+    getInt :: Expr -> EvalMonad Int
+    getInt n = do
+      result <- eval n
+      return $ case result of
+                  (Lit (I i)) -> i
+                  _ -> error "Not an int"
+        
 
     

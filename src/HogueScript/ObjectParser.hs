@@ -62,7 +62,7 @@ litExpr :: Parser Expr
 litExpr = try $ Lit <$> literal
 
 identifier :: Parser String
-identifier = letter <:> many alphaNum
+identifier = choice [letter, char '+'] <:> many alphaNum
 
 --simplePath :: Parser [String]
 --simplePath = try $ (:) <$> identifier <*> many ((char '.') *> identifier)
