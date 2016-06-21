@@ -34,7 +34,7 @@ instance Show BuiltIn where
 
 -- The state of evaluation of a property expression
 data EvalState = EvalState {
-                    getEnv :: Object,
+                    getEnv :: [Object],
                     getObject :: Object,
                     failure :: Maybe String }
 
@@ -45,6 +45,7 @@ data Type = BOOL | CHAR | STRING | INT | FLOAT | OBJECT
             deriving (Show, Eq)
 data PropError = BAD_TYPE Type --Type
                  | NO_SUCH_PROP ObjKey
+                 | NO_SUCH_PATH [ObjKey]
                  | TRACE Expr PropError
                  | MSSG String
                  deriving (Show, Eq)

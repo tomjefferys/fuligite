@@ -4,13 +4,13 @@ module HogueScript.Functions where
 import HogueScript.Expr
 import HogueScript.ObjKey
 import HogueScript.Eval
-import HogueScript.Expr
 import HogueScript.ObjZipper
+import HogueScript.Zipper (Zipper)
+import qualified HogueScript.Zipper as Zipper
 import HogueScript.Literal
 
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
-import Control.Monad (foldM)
 
 defaultEnv :: Object
 defaultEnv = Map.fromList [
@@ -24,11 +24,12 @@ defaultEnv = Map.fromList [
 fnVar :: [Expr] -> EvalMonad Expr
 fnVar [name,value] = do
     st <- get
-    let env = getEnv st
+    let envZip = Zipper.fromList $ getEnv st
     let env' = case name of
-            (Get [identifier]) -> Map.insert (StrKey identifier) value env
-            _ -> env
-    put $ st { getEnv = env' }
+            (Get [identifier]) ->
+                 Map.insert (StrKey identifier) value (Zipper.get envZip)
+            _ -> Zipper.get envZip
+    put $ st { getEnv = Zipper.toList $ Zipper.set envZip env' }
     return value
 fnVar _ = error "Illegal argument passed to var"
 
@@ -61,13 +62,14 @@ fnDo (expr:exprs) = do
     fnDo exprs
 fnDo _ = error "Illegal argument passed to do"
 
+-- TODO this should be able to cope with mixed literal, eg Float + Int
+-- or String + Bool
 -- Sum function, adds up arguments
 fnSum :: [Expr] -> EvalMonad Expr
 fnSum exprs = do
     nums <- mapM getInt exprs
     let result = foldr (+) 0 nums
     return $ Lit $ I result
-   -- foldM (\acc n -> acc + getInt n) 1 exprs
   where
     getInt :: Expr -> EvalMonad Int
     getInt n = do

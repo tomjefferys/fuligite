@@ -4,6 +4,8 @@ import HogueScript.Expr
 import HogueScript.Literal
 import HogueScript.ObjZipper
 import HogueScript.ObjKey
+import HogueScript.Zipper (Zipper)
+import qualified HogueScript.Zipper as Zipper
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 
@@ -32,9 +34,20 @@ doFunc (Fapp path args) = do
     fn args
 doFunc _ = error "Can't call doFunc on non function"
 
+-- TODO make this generic
+--data EnvZipper = EnvZipper [Object] [Object]
+--
+--collapseEnv :: EnvZipper -> [Object]
+--collapseEnv (EnvZipper [] outer) = outer
+--collapseEnv (EnvZipper (env:inner) outer) =
+--    collapseEnv $ EnvZipper inner (env:outer)
+--
+--setEnvObj :: Object -> EnvZipper -> EnvZipper
+--setEnvObj obj (EnvZipper inner []) = error "EnvZipper no env selected"
+--setEnvObj obj (EnvZipper inner (env:outer)) = EnvZipper inner (obj:outer)
 
-setEnv :: StateSetter
-setEnv obj st = st { getEnv = obj }
+setEnv :: Zipper Object -> StateSetter
+setEnv zipper obj st = st { getEnv = Zipper.toList $ Zipper.set zipper obj }
 
 setObj :: StateSetter
 setObj obj st = st { getObject = obj }
@@ -47,8 +60,24 @@ lookupPath path = do
     obj <- fmap getObject get
     env <- fmap getEnv get
     let objResult = getPath (ObjZipper setObj [] (Obj obj)) path
-    let envResult = getPath (ObjZipper setEnv [] (Obj env)) path
+    -- TODO need to look through all envs until we find a match
+    --let envResult = getPath (ObjZipper setEnv [] (Obj $ head env)) path
+    let envResult = lookupEnvPath env path
     return $ either (const envResult) Right objResult
+
+lookupEnvPath :: [Object] -> [ObjKey] -> Either PropError ObjZipper
+lookupEnvPath envs path = 
+    let result = Zipper.find (findFn path) (Zipper.fromList envs)
+    in case result of
+        Just zipper -> Right zipper
+        Nothing -> Left $ NO_SUCH_PATH path
+   
+findFn :: [ObjKey] -> Zipper Object -> Maybe ObjZipper
+findFn path zipper = do
+    obj <- Zipper.get zipper
+    let result = getPath (ObjZipper (setEnv zipper) [] (Obj obj)) path
+    either (const Nothing) Just result
+
 
 -- | Logs a failure in the state
 logFailure :: String    -- ^ The failure message
@@ -75,7 +104,7 @@ makeEvalState :: Object     -- ^ The environment
               -> Object     -- ^ The local object
               -> EvalState  -- ^ Returns a new EvalState
 makeEvalState env obj = 
-    EvalState env obj Nothing
+    EvalState [env] obj Nothing
 
 -- | Evaluates a property coercing its value into a string
 evalPropString :: [ObjKey]
