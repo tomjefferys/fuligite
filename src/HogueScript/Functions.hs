@@ -23,14 +23,20 @@ defaultEnv = Map.fromList [
 -- (var name expr)
 fnVar :: [Expr] -> EvalMonad Expr
 fnVar [name,value] = do
+    let setVar =
+          case name of
+            (Get [identifier]) -> Map.insert (StrKey identifier) value
+            _ -> id
+
     st <- get
     let envZip = Zipper.fromList $ getEnv st
-    let env' = case name of
-            (Get [identifier]) ->
-                 Map.insert (StrKey identifier) value (Zipper.get envZip)
-            _ -> Zipper.get envZip
-    put $ st { getEnv = Zipper.toList $ Zipper.set envZip env' }
+    let envs = maybe
+                 (getEnv st)
+                 (Zipper.toList . Zipper.set envZip . setVar)
+                 (Zipper.get envZip)
+    put $ st { getEnv = envs }
     return value
+
 fnVar _ = error "Illegal argument passed to var"
 
 -- function to set a variable
