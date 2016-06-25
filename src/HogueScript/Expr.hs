@@ -2,7 +2,8 @@ module HogueScript.Expr where
 
 import HogueScript.Literal
 import HogueScript.ObjKey
-import Data.Map.Strict
+import Data.Map (Map)
+import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 
 -- The map of properties for an entity
@@ -33,10 +34,25 @@ instance Show BuiltIn where
     show (BuiltIn name _) = name
 
 -- The state of evaluation of a property expression
-data EvalState = EvalState {
-                    getEnv :: [Object],
-                    getObject :: Object,
-                    failure :: Maybe String }
+data EvalState =
+    EvalState {
+        getEnv :: [Object],
+        getObject :: Object,
+        failure :: Maybe String }
+
+pushEnv :: EvalMonad ()
+pushEnv = do
+    st <- get
+    put st { getEnv = Map.empty : (getEnv st) }
+
+popEnv :: EvalMonad ()
+popEnv = do
+    st <- get
+    let st' =
+          case getEnv st of
+            (_:tl) -> st { getEnv = tl }
+            []     -> st
+    put st'
 
 -- The Monad stack used when evaluating expressions
 type EvalMonad = StateT EvalState (Either PropError)

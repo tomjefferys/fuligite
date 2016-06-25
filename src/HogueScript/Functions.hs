@@ -5,7 +5,6 @@ import HogueScript.Expr
 import HogueScript.ObjKey
 import HogueScript.Eval
 import HogueScript.ObjZipper
-import HogueScript.Zipper (Zipper)
 import qualified HogueScript.Zipper as Zipper
 import HogueScript.Literal
 
@@ -29,7 +28,9 @@ fnVar [name,value] = do
             _ -> id
 
     st <- get
-    let envZip = Zipper.fromList $ getEnv st
+    -- shift the zipper right as we need to set the variable in the
+    -- super environment
+    let envZip = Zipper.right $ Zipper.fromList $ getEnv st
     let envs = maybe
                  (getEnv st)
                  (Zipper.toList . Zipper.set envZip . setVar)

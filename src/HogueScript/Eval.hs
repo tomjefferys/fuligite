@@ -24,6 +24,7 @@ eval expr =
         (Fapp path args) -> doFunc (Fapp path args)
         _ -> undefined
 
+-- | Exececute a function
 doFunc :: Expr -> EvalMonad Expr
 doFunc (Fapp path args) = do
     -- lookup name, first in obj, then env
@@ -31,20 +32,11 @@ doFunc (Fapp path args) = do
     let fn = case fun of
                 Right (ObjZipper _ _ (HFn (BuiltIn _ fn'))) -> fn'
                 _ -> error ("unknown function" ++ show path)
-    fn args
+    pushEnv 
+    result <- fn args
+    popEnv
+    return result
 doFunc _ = error "Can't call doFunc on non function"
-
--- TODO make this generic
---data EnvZipper = EnvZipper [Object] [Object]
---
---collapseEnv :: EnvZipper -> [Object]
---collapseEnv (EnvZipper [] outer) = outer
---collapseEnv (EnvZipper (env:inner) outer) =
---    collapseEnv $ EnvZipper inner (env:outer)
---
---setEnvObj :: Object -> EnvZipper -> EnvZipper
---setEnvObj obj (EnvZipper inner []) = error "EnvZipper no env selected"
---setEnvObj obj (EnvZipper inner (env:outer)) = EnvZipper inner (obj:outer)
 
 setEnv :: Zipper Object -> StateSetter
 setEnv zipper obj st = st { getEnv = Zipper.toList $ Zipper.set zipper obj }
@@ -60,23 +52,22 @@ lookupPath path = do
     obj <- fmap getObject get
     env <- fmap getEnv get
     let objResult = getPath (ObjZipper setObj [] (Obj obj)) path
-    -- TODO need to look through all envs until we find a match
-    --let envResult = getPath (ObjZipper setEnv [] (Obj $ head env)) path
     let envResult = lookupEnvPath env path
     return $ either (const envResult) Right objResult
 
+-- | Lookups up a path in a list of environments
 lookupEnvPath :: [Object] -> [ObjKey] -> Either PropError ObjZipper
 lookupEnvPath envs path = 
     let result = Zipper.find (findFn path) (Zipper.fromList envs)
     in case result of
         Just zipper -> Right zipper
         Nothing -> Left $ NO_SUCH_PATH path
-   
-findFn :: [ObjKey] -> Zipper Object -> Maybe ObjZipper
-findFn path zipper = do
-    obj <- Zipper.get zipper
-    let result = getPath (ObjZipper (setEnv zipper) [] (Obj obj)) path
-    either (const Nothing) Just result
+  where 
+    findFn :: [ObjKey] -> Zipper Object -> Maybe ObjZipper
+    findFn path zipper = do
+        obj <- Zipper.get zipper
+        let result = getPath (ObjZipper (setEnv zipper) [] (Obj obj)) path
+        either (const Nothing) Just result
 
 
 -- | Logs a failure in the state
