@@ -17,8 +17,8 @@ instance ObjKeySrc String where
     
 
 setProp :: (LiteralType a, ObjKeySrc s) => (s, a) -> Object -> Object
-setProp (prop,value) obj = 
-    Map.insert (getKey prop) (getExpr value) obj
+setProp (prop,value) = 
+    Map.insert (getKey prop) (getExpr value)
 
 mkObj :: Object
 mkObj = Map.empty

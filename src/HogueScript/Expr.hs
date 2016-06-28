@@ -43,7 +43,7 @@ data EvalState =
 pushEnv :: EvalMonad ()
 pushEnv = do
     st <- get
-    put st { getEnv = Map.empty : (getEnv st) }
+    put st { getEnv = Map.empty : getEnv st }
 
 popEnv :: EvalMonad ()
 popEnv = do

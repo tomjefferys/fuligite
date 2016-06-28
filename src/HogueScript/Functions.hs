@@ -63,7 +63,7 @@ fnSet _ = error "Illegal argument passed to set"
 -- function to execute multiple functions
 -- (do expr1 expr2 expr3)
 fnDo :: [Expr] -> EvalMonad Expr
-fnDo (expr:[]) = eval expr
+fnDo ([expr]) = eval expr
 fnDo (expr:exprs) = do
     _ <- eval expr
     fnDo exprs
@@ -72,6 +72,7 @@ fnDo _ = error "Illegal argument passed to do"
 -- TODO this should be able to cope with mixed literal, eg Float + Int
 -- or String + Bool
 -- Sum function, adds up arguments
+{-# ANN fnSum "HLint: ignore Use sum" #-}
 fnSum :: [Expr] -> EvalMonad Expr
 fnSum exprs = do
     nums <- mapM getInt exprs

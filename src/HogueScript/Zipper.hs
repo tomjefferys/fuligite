@@ -4,7 +4,7 @@ data Zipper a = Zipper [a] [a]
 
 -- | Create a zipper from a list
 fromList :: [a] -> Zipper a
-fromList lst = Zipper [] lst
+fromList = Zipper [] 
 
 -- | Convert a zipper into a list
 toList :: Zipper a -> [a]
@@ -19,7 +19,7 @@ right (Zipper xs (y:ys)) = Zipper (y:xs) ys
 
 -- | Move the focus of the zipper one elements to the left
 left :: Zipper a -> Zipper a
-left (Zipper [] ys) = (Zipper [] ys)
+left (Zipper [] ys) = Zipper [] ys
 left (Zipper (x:xs) ys) = Zipper xs (x:ys)
 
 -- | Is this zipper at it's end point?
@@ -31,15 +31,15 @@ atEnd _ = False
 -- | Get the elment cuttently in focus
 get :: Zipper a -> Maybe a
 get (Zipper _ []) = Nothing
-get (Zipper xs (y:ys)) = Just y
+get (Zipper _ (y:_)) = Just y
 
 set :: Zipper a -> a -> Zipper a
-set (Zipper _ []) v = error "Can't set at end of zipper"
+set (Zipper _ []) _ = error "Can't set at end of zipper"
 set (Zipper xs (_:ys)) v = Zipper xs (v:ys)
 
 -- | Shift focus to the next (right) element matching a predicate
 find :: (Zipper a -> Maybe b) -> Zipper a -> Maybe b
-find p (Zipper _ []) = Nothing
+find _ (Zipper _ []) = Nothing
 find p z =
     case p z of
       Just result -> Just result

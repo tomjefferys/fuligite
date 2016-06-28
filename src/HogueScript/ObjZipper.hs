@@ -17,8 +17,7 @@ getZipperExpr :: ObjZipper -> Expr
 getZipperExpr (ObjZipper _ _ expr) = expr
 
 setZipperExpr :: ObjZipper -> Expr -> ObjZipper
-setZipperExpr (ObjZipper setter path _) expr = 
-                (ObjZipper setter path expr)
+setZipperExpr (ObjZipper setter path _) = ObjZipper setter path 
 
 getField :: ObjZipper -> ObjKey -> Either PropError ObjZipper
 getField (ObjZipper updater path expr) field = 

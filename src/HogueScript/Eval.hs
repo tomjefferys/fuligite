@@ -58,13 +58,13 @@ lookupPath path = do
 -- | Lookups up a path in a list of environments
 lookupEnvPath :: [Object] -> [ObjKey] -> Either PropError ObjZipper
 lookupEnvPath envs path = 
-    let result = Zipper.find (findFn path) (Zipper.fromList envs)
+    let result = Zipper.find findFn (Zipper.fromList envs)
     in case result of
         Just zipper -> Right zipper
         Nothing -> Left $ NO_SUCH_PATH path
   where 
-    findFn :: [ObjKey] -> Zipper Object -> Maybe ObjZipper
-    findFn path zipper = do
+    findFn :: Zipper Object -> Maybe ObjZipper
+    findFn zipper = do
         obj <- Zipper.get zipper
         let result = getPath (ObjZipper (setEnv zipper) [] (Obj obj)) path
         either (const Nothing) Just result
