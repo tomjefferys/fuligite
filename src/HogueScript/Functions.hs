@@ -75,6 +75,8 @@ fnDo _ = error "Illegal argument passed to do"
 {-# ANN fnSum "HLint: ignore Use sum" #-}
 fnSum :: [Expr] -> EvalMonad Expr
 fnSum exprs = do
+    sumables <- promoteToSummables exprs
+    use monoid mconcat?
     nums <- mapM getInt exprs
     let result = foldr (+) 0 nums
     return $ Lit $ I result
@@ -86,5 +88,20 @@ fnSum exprs = do
                   (Lit (I i)) -> i
                   _ -> error "Not an int"
         
+promoteToSummables :: [Expr] -> EvalMonad [Literal]
+promoteToSummables exprs = do
+    literals <- mapM toLiteral exprs
+    let commonType = foldr1 getCommonType $ fmap getType literals
+    return $ map (promoteLit commonType) literals
+  where
+    toLiteral :: Expr -> EvalMonad Literal
+    toLiteral expr = do
+      result <- eval expr
+      case result of 
+          (Lit l) -> return l
+          _ -> error $ show expr ++ " is not equal to literal"
+
+    
+    
 
     
