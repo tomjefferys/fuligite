@@ -2,7 +2,6 @@
 module HogueScript.Literal where
 
 import Data.List (find)
-import Data.Maybe (fromJust)
 
 -- Represents a literal type
 data Literal = B Bool | C Char | S String | I Int | F Float

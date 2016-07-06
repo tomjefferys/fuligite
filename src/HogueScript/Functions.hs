@@ -69,24 +69,21 @@ fnDo (expr:exprs) = do
     fnDo exprs
 fnDo _ = error "Illegal argument passed to do"
 
--- TODO this should be able to cope with mixed literal, eg Float + Int
--- or String + Bool
 -- Sum function, adds up arguments
 {-# ANN fnSum "HLint: ignore Use sum" #-}
 fnSum :: [Expr] -> EvalMonad Expr
 fnSum exprs = do
-    sumables <- promoteToSummables exprs
-    use monoid mconcat?
-    nums <- mapM getInt exprs
-    let result = foldr (+) 0 nums
-    return $ Lit $ I result
+    summables <- promoteToSummables exprs
+    return $ Lit $ foldr1 (add) summables
   where
-    getInt :: Expr -> EvalMonad Int
-    getInt n = do
-      result <- eval n
-      return $ case result of
-                  (Lit (I i)) -> i
-                  _ -> error "Not an int"
+    add :: Literal -> Literal -> Literal
+    add (B b1) (B b2) = B $ b1 || b2
+    add (C _) (C _) = error "Can't add chars"
+    add (I i1) (I i2) = I $ i1 + i2
+    add (F f1) (F f2) = F $ f1 + f2
+    add (S s1) (S s2) = S $ s1 ++ s2
+    add _ _ = error "Attempting to add different literal types"
+
         
 promoteToSummables :: [Expr] -> EvalMonad [Literal]
 promoteToSummables exprs = do
