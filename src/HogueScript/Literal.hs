@@ -26,6 +26,7 @@ promoteLit t (S s) = promote s t
 promoteLit t (I i) = promote i t
 promoteLit t (F f) = promote f t
 
+
 class Promotable a where
     promote :: a -> LitType -> Literal
 

@@ -13,10 +13,12 @@ import Control.Monad.State.Strict
 
 defaultEnv :: Object
 defaultEnv = Map.fromList [
+      (StrKey "stdout", Lit $ S ""),
       (StrKey "var", HFn $ BuiltIn "var" fnVar),
       (StrKey "set", HFn $ BuiltIn "set" fnSet),
       (StrKey "do", HFn $ BuiltIn "do" fnDo),
-      (StrKey "+", HFn $ BuiltIn "+" fnSum)]
+      (StrKey "+", HFn $ BuiltIn "+" fnSum),
+      (StrKey "print", HFn $ BuiltIn "print" fnPrint)]
 
 -- function to declare a variable
 -- (var name expr)
@@ -59,6 +61,28 @@ fnSet [name, value] = do
            (Obj obj) -> setter obj st 
            _ -> error "collapse should return an object"
 fnSet _ = error "Illegal argument passed to set"
+
+-- appends the expressions to the variable __stdout
+fnPrint :: [Expr] -> EvalMonad Expr
+fnPrint exprs = do
+    buffer <- eval (Get ["stdout"])
+    stdout <- lift $ case buffer of
+                Null -> Right ""
+                (Lit (S val)) -> Right val
+                _ -> Left $ INVALID_EXPR buffer "stdout is not string" 
+    str <- foldM concatExpr "" exprs
+    let stdout' = stdout ++ str
+    _ <- fnSet [Get ["stdout"], Lit $ S stdout']
+    return $ Lit $ S stdout'
+  where
+    concatExpr :: String -> Expr -> EvalMonad String
+    concatExpr acc expr = do
+       result <- eval expr
+       lift $ case result of
+                (Lit lit) -> Right $ acc ++ toString lit
+                _ -> Left $
+                   INVALID_EXPR result "expression is not printable"
+    
 
 -- function to execute multiple functions
 -- (do expr1 expr2 expr3)

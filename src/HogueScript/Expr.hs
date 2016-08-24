@@ -64,5 +64,6 @@ data PropError = BAD_TYPE Type --Type
                  | NO_SUCH_PATH [ObjKey]
                  | TRACE Expr PropError
                  | MSSG String
+                 | INVALID_EXPR Expr String
                  deriving (Show, Eq)
 
