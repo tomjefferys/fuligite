@@ -5,8 +5,9 @@ import HogueScript.Functions (defaultEnv)
 import HogueScript.Object (mkObj)
 import HogueScript.ObjectParser (propfile)
 import HogueScript.ObjKey (ObjKey(..))
-import HogueScript.Expr (Expr)
+import HogueScript.Expr (Expr(..), EvalState(..))
 import HogueScript.Eval (makeEvalState, eval)
+import HogueScript.Literal (toString)
 import System.Environment (getArgs)
 
 import Control.Monad.State.Strict
@@ -45,6 +46,19 @@ runPropFile props = do
         let eResult = runStateT (eval expr) (makeEvalState env mkObj)
         case eResult of
           Left err -> print err
-          Right (expr',st) -> print expr'
+          Right (expr',st) -> do
+            print $ maybe "" id (getStdOut st)
+
       Nothing -> print "No main"
+
+getStdOut :: EvalState -> Maybe String
+getStdOut st = do
+    let env = getEnv st
+    expr <- case env of
+               [] -> Nothing 
+               top:_ -> Map.lookup (StrKey "stdout") top
+    lit <- case expr of
+             Lit l -> Just l
+             _ -> Nothing
+    return $ toString lit
 
