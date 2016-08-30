@@ -1,12 +1,14 @@
 -- | Built in functions 
 module HogueScript.Functions where
 
-import HogueScript.Expr
-import HogueScript.ObjKey
-import HogueScript.Eval
-import HogueScript.ObjZipper
+import HogueScript.Expr (Expr(..), Object, BuiltIn(..), EvalMonad, getEnv)
+import HogueScript.Expr (PropError(..), EvalState, getObj, getIdentifier)
+import HogueScript.ObjKey (ObjKey(..))
+import HogueScript.Eval (lookupPath, eval)
+import HogueScript.ObjZipper (ObjZipper, setZipperExpr, collapse)
 import qualified HogueScript.Zipper as Zipper
-import HogueScript.Literal
+import HogueScript.Literal (
+               Literal(..), toString, getCommonType, getType, promoteLit)
 
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
@@ -17,16 +19,19 @@ defaultEnv = Map.fromList [
       (StrKey "var", HFn $ BuiltIn "var" fnVar),
       (StrKey "set", HFn $ BuiltIn "set" fnSet),
       (StrKey "do", HFn $ BuiltIn "do" fnDo),
+      (StrKey "fn", HFn $ BuiltIn "fn" fnFn),
       (StrKey "+", HFn $ BuiltIn "+" fnSum),
       (StrKey "print", HFn $ BuiltIn "print" fnPrint)]
+
 
 -- function to declare a variable
 -- (var name expr)
 fnVar :: [Expr] -> EvalMonad Expr
 fnVar [name,value] = do
+    value' <- eval value
     let setVar =
           case name of
-            (Get [identifier]) -> Map.insert (StrKey identifier) value
+            (Get [identifier]) -> Map.insert (StrKey identifier) value'
             _ -> id
 
     st <- get
@@ -38,7 +43,7 @@ fnVar [name,value] = do
                  (Zipper.toList . Zipper.set envZip . setVar)
                  (Zipper.get envZip)
     put $ st { getEnv = envs }
-    return value
+    return value'
 
 fnVar _ = error "Illegal argument passed to var"
 
@@ -61,6 +66,16 @@ fnSet [name, value] = do
            (Obj obj) -> setter obj st 
            _ -> error "collapse should return an object"
 fnSet _ = error "Illegal argument passed to set"
+
+-- function definition
+fnFn :: [Expr] -> EvalMonad Expr
+fnFn [params, def] = do
+    obj <- lift $ getObj params
+    let elems = Map.elems obj
+    ids <- lift $ mapM getIdentifier elems
+    let ids' = map (foldr1 (++)) ids
+    lift $ Right $ Fn ids' def
+fnFn args = lift $ Left $ BAD_ARGS args
 
 -- appends the expressions to the variable __stdout
 fnPrint :: [Expr] -> EvalMonad Expr

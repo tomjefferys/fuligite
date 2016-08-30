@@ -19,6 +19,19 @@ data Expr = Lit Literal |
             Null 
             deriving (Ord, Eq, Show)
 
+getObj :: Expr -> Either PropError Object
+getObj expr =
+    case expr of
+      Obj obj -> Right obj
+      _ -> Left $ BAD_TYPE OBJECT
+
+getIdentifier :: Expr -> Either PropError [String]
+getIdentifier expr =
+    case expr of
+      Get path -> Right path
+      _ -> Left $ MSSG $ "Not Get: " ++ show expr
+
+
 -- Type for a builtin function
 -- Takes a name and the function itself
 data BuiltIn = BuiltIn String ([Expr] -> EvalMonad Expr)
@@ -65,5 +78,6 @@ data PropError = BAD_TYPE Type --Type
                  | TRACE Expr PropError
                  | MSSG String
                  | INVALID_EXPR Expr String
+                 | BAD_ARGS [Expr]
                  deriving (Show, Eq)
 

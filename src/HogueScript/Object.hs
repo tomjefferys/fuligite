@@ -14,7 +14,6 @@ instance ObjKeySrc Integer where
 
 instance ObjKeySrc String where
     getKey = StrKey
-    
 
 setProp :: (LiteralType a, ObjKeySrc s) => (s, a) -> Object -> Object
 setProp (prop,value) = 

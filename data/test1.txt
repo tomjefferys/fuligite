@@ -1,3 +1,4 @@
 prop1 : "hello"
 prop2 : 1234
+fun1
 main : (print prop1 prop2)
