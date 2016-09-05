@@ -21,22 +21,64 @@ eval expr =
         (Null) -> return Null
         (Lit l) -> return $ Lit l
         (Obj o) -> return $ Obj o
-        (Fapp path args) -> doFunc (Fapp path args)
+        (Fapp path args) -> doFunc path args
         _ -> undefined
 
--- | Exececute a function
-doFunc :: Expr -> EvalMonad Expr
-doFunc (Fapp path args) = do
+-- | Execute a function
+doFunc :: [String]          -- ^ The path to the function
+       -> [Expr]            -- ^ The function arguments
+       -> EvalMonad Expr
+doFunc path args = do
     -- lookup name, first in obj, then env
     fun <- lookupPath $ fmap StrKey path
     let fn = case fun of
                 Right (ObjZipper _ _ (HFn (BuiltIn _ fn'))) -> fn'
+                Right (ObjZipper _ _ (Fn params def)) -> userFunc params def
                 _ -> error ("unknown function" ++ show path)
     pushEnv 
     result <- fn args
     popEnv
     return result
-doFunc _ = error "Can't call doFunc on non function"
+
+-- | Execute a user defined function
+userFunc :: [String] -> Expr -> [Expr] -> EvalMonad Expr
+userFunc params expr args = do
+
+    -- bind arguments (When are arguments evaluated?)
+    evalArgs <- mapM eval args
+    let zipped = zip params evalArgs
+    mapM_ (\(param,arg) -> dv param arg) zipped
+
+    -- execute expr
+    eval expr 
+
+  where
+    dv :: String -> Expr -> EvalMonad Expr 
+    dv param arg = do
+      st <- get
+      declareVar (Zipper.fromList $ getEnv st) param arg
+
+-- function to declare a variable
+-- (var name expr)
+declareVar :: Zipper Object -- ^ A zipper to the environment
+           -> String -- ^ The variable neme
+           -> Expr   -- ^ The value of this variable
+           -> EvalMonad Expr
+declareVar envZip name value = do
+    value' <- eval value
+    let setVar = Map.insert (StrKey name) value'
+
+    st <- get
+    -- shift the zipper right as we need to set the variable in the
+    -- super environment
+    -- for binding of params we don't want to do this
+    --let envZip = Zipper.right $ Zipper.fromList $ getEnv st
+    let envs =  maybe
+                 (getEnv st)
+                 (Zipper.toList . Zipper.set envZip . setVar)
+                 (Zipper.get envZip)
+    put $ st { getEnv =  envs }
+    return value'
 
 setEnv :: Zipper Object -> StateSetter
 setEnv zipper obj st = st { getEnv = Zipper.toList $ Zipper.set zipper obj }

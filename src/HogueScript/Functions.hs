@@ -112,7 +112,8 @@ fnDo _ = error "Illegal argument passed to do"
 {-# ANN fnSum "HLint: ignore Use sum" #-}
 fnSum :: [Expr] -> EvalMonad Expr
 fnSum exprs = do
-    summables <- promoteToSummables exprs
+    literals <- mapM eval exprs
+    summables <- promoteToSummables literals
     return $ Lit $ foldr1 (add) summables
   where
     add :: Literal -> Literal -> Literal

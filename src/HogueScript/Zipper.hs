@@ -28,7 +28,7 @@ atEnd (Zipper _ []) = True
 atEnd _ = False
 
 
--- | Get the elment cuttently in focus
+-- | Get the elment cur:ently in focus
 get :: Zipper a -> Maybe a
 get (Zipper _ []) = Nothing
 get (Zipper _ (y:_)) = Just y
