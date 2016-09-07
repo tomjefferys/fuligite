@@ -1,0 +1,7 @@
+varone:"hello world"
+(var addFive (fn {a} (+ a 5)))
+(print "one\n")
+(print (+ 2 3) "\n")
+(print (addFive vartwo) "\n")
+(print varone)
+vartwo:15

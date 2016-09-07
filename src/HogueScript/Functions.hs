@@ -94,7 +94,7 @@ fnPrint exprs = do
     concatExpr acc expr = do
        result <- eval expr
        lift $ case result of
-                (Lit lit) -> Right $ acc ++ toString lit
+                (Lit lit) -> Right $ acc ++ toString lit ++ "\n"
                 _ -> Left $
                    INVALID_EXPR result "expression is not printable"
     
