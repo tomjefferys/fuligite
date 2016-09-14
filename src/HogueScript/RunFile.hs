@@ -8,6 +8,7 @@ import HogueScript.ObjKey (ObjKey(..))
 import HogueScript.Expr (Expr(..), EvalState(..), Object, EvalMonad)
 import HogueScript.Eval (makeEvalState, eval, declareVar)
 import HogueScript.Literal (toString)
+import HogueScript.FileLoader (loadFile)
 import qualified HogueScript.Zipper as Zipper
 
 import Control.Monad.State.Strict
@@ -18,11 +19,14 @@ import Text.ParserCombinators.Parsec (parseFromFile)
 
 runFile :: String -> IO ()
 runFile fileName = do
-    result <- parseFromFile objectfile fileName
-    case result of
-      Right (Obj obj) -> do
-        runObjectFile obj
-      Left err -> print err
+    object <- loadFile fileName
+    runObjectFile object
+
+    --result <- parseFromFile objectfile fileName
+    --case result of
+    --  Right (Obj obj) -> do
+    --    runObjectFile obj
+    --  Left err -> print err
 
 runObjectFile :: Object -> IO ()
 runObjectFile obj = do

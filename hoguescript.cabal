@@ -50,7 +50,7 @@ library
   -- Modules exported by the library.
   exposed-modules:  HogueScript.Object, HogueScript.ObjectParser, HogueScript.REPL,
                     HogueScript.Literal, HogueScript.LiteralType, HogueScript.Expr,
-                    HogueScript.Eval, HogueScript.RunFile
+                    HogueScript.Eval, HogueScript.RunFile, HogueScript.FileLoader
   
   ghc-options:      -Wall -optc-ffast-math
   -- Modules included in this library but not exported.
