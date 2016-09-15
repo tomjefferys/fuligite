@@ -56,7 +56,7 @@ startBracket (ch,chloc) brackets@((_,bloc):_) =
 
 endBracket :: CharCoord -> [CharCoord] -> Either String [CharCoord]
 endBracket _ [] = Left $ "End without open"
-endBracket (ch,_) brackets@((b,bloc):btail) = 
+endBracket (ch,_) ((b,_):btail) = 
     case ch of
       ')' -> if b == '('
                 then Right btail

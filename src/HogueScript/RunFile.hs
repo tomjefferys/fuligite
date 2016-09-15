@@ -1,9 +1,7 @@
 module HogueScript.RunFile where
 
-import qualified HogueScript.REPL as REPL
 import HogueScript.Functions (defaultEnv)
 import HogueScript.Object (mkObj)
-import HogueScript.ObjectParser (objectfile)
 import HogueScript.ObjKey (ObjKey(..))
 import HogueScript.Expr (Expr(..), EvalState(..), Object, EvalMonad)
 import HogueScript.Eval (makeEvalState, eval, declareVar)
@@ -15,26 +13,18 @@ import Control.Monad.State.Strict
 
 import qualified Data.Map.Strict as Map
 
-import Text.ParserCombinators.Parsec (parseFromFile)
-
 runFile :: String -> IO ()
 runFile fileName = do
     object <- loadFile fileName
     runObjectFile object
-
-    --result <- parseFromFile objectfile fileName
-    --case result of
-    --  Right (Obj obj) -> do
-    --    runObjectFile obj
-    --  Left err -> print err
 
 runObjectFile :: Object -> IO ()
 runObjectFile obj = do
     let st = makeEvalState defaultEnv mkObj
     let eResult = runStateT (runObject obj) st
     let (str, st') = case eResult of
-                    Left error -> (show error, st)
-                    Right (_, st') -> ("OK", st')
+                    Left err -> (show err, st)
+                    Right (_, st'') -> ("OK", st'')
     print str
     let mOut = getStdOut st'
     case mOut of 
@@ -50,16 +40,13 @@ runObject obj = do
         (\item ->
             case item of
               (StrKey key, expr) -> bindExpr key expr
-              (NumKey _, expr) -> eval expr)
+              (NumKey _, expr) -> eval expr
+              (NullKey, _) -> error "Unexpected NullKey found")
   where
     bindExpr :: String -> Expr -> EvalMonad Expr
     bindExpr key expr = do
       env <- fmap getEnv get
       declareVar (Zipper.fromList env) key expr
-      
-    executeExpr :: Expr -> EvalMonad Expr
-    executeExpr expr = eval expr
-
 
 
 runPropFile :: [(ObjKey, Expr)] -> IO ()
@@ -75,7 +62,7 @@ runPropFile props = do
         let eResult = runStateT (eval expr) (makeEvalState env mkObj)
         case eResult of
           Left err -> print err
-          Right (expr',st) -> do
+          Right (_,st) -> do
             print $ maybe "" id (getStdOut st)
 
       Nothing -> print "No main"
