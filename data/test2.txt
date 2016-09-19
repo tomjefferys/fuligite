@@ -3,6 +3,8 @@
  (fn {a}
   (+ a 5)))
 (var vartwo 2)
-(print "one\n")
-(print (+ 2 3) "\n")
+(print "There is a comment next")
+; This is a comment (({{
+(print "o(ne\n")
+(print (+ 2 3) ")\n") 
 (print (addFive vartwo) "\n")
