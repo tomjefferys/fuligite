@@ -4,17 +4,17 @@ module HogueScript.FileLoader
 
 import HogueScript.ObjectParser (objectfile)
 import HogueScript.Expr (Object, Expr(..))
-import Text.ParserCombinators.Parsec (parseFromFile)
+import Text.ParserCombinators.Parsec (parse)
 
-import Debug.Trace
-
+-- | (row,column)
 type Coord = (Int, Int)
+
+-- | A Tuple of a character and a coordinate
 type CharCoord = (Char, Coord)
 
 col :: Coord -> Int
 col (_,c) = c
 
--- TODO comments, semicolon seems to be lisp style
 
 -- loads a file.
 -- removes comments
@@ -24,31 +24,41 @@ loadFile :: String -> IO (Object)
 loadFile fileName = do
     content <- readFile fileName
 
-    let coords = getCharCoord content
-    let coords' = trace (show coords) (stripComments coords)
-    let check = checkBrackets coords' []
+    let coords = toCharCoords content
+    let coords' = stripComments coords
+    let content' = fromCharCoords coords'
+    let check = checkPunctuation coords' []
     case check of
       Left err -> error err
-      Right _ ->  loadAndParse fileName
+      Right _ -> return $ doParse content'
 
-stripComments :: [CharCoord] -> [CharCoord]
+-- | Strip comments (anything after a semicolon)
+stripComments :: [CharCoord] -- | the input content
+              -> [CharCoord] -- | the content with comment removed
 stripComments [] = []
 stripComments ((';',(row,_)):remainder) =
-    stripComments $ dropWhile (\(_,(row',_)) -> row == row') remainder
+    stripComments $ dropWhile isSameRow remainder
+  where
+    isSameRow (_,(row',_)) = row == row'
 stripComments (ch:remainder) = ch:(stripComments remainder)
 
-loadAndParse :: String -> IO (Object)
-loadAndParse fileName = do
-    result <- parseFromFile objectfile fileName
-    case result of
-      Right (Obj obj) -> return obj 
-      Right _ -> error "File did not return object"
-      Left err -> error $ show err
+-- | gets parsec to do the actual parsing
+doParse :: String -> Object
+doParse content =
+    case parse objectfile "error" content of
+        Left err -> error $ show err
+        Right (Obj obj) -> obj
+        Right _ -> error "File did not return object"
 
-checkBrackets :: [CharCoord] -> [CharCoord] -> Either String ()
-checkBrackets [] [] = Right ()
-checkBrackets [] (_:_) = Left "Unexpected end of file"
-checkBrackets (cc@(chr,_):chrs) punctuation = do
+
+-- | Checks punctuation is correct, ie quotes and brackets 
+-- are matched, and bracket indentation is correct
+checkPunctuation :: [CharCoord]         -- ^ The content to be checked
+                 -> [CharCoord]         -- ^ Punctuation stack
+                 -> Either String ()    -- ^ Either an error, or nothing if ok
+checkPunctuation [] [] = Right ()
+checkPunctuation [] (_:_) = Left "Unexpected end of file"
+checkPunctuation (cc@(chr,_):chrs) punctuation = do
     punctuation' <- case chr of
                   '\'' -> handleQuote cc punctuation
                   '"' -> handleQuote cc punctuation
@@ -57,7 +67,7 @@ checkBrackets (cc@(chr,_):chrs) punctuation = do
                   ')' -> ifNotQuoted endBracket cc punctuation
                   '}' -> ifNotQuoted endBracket cc punctuation
                   _ -> Right punctuation
-    checkBrackets chrs punctuation'
+    checkPunctuation chrs punctuation'
 
 -- | Calls the supplied function if there are no quotes on the punctuation
 -- stack
@@ -92,14 +102,21 @@ isQuote '\'' = True
 isQuote '"' = True
 isQuote _ = False
 
-startBracket :: CharCoord -> [CharCoord] -> Either String [CharCoord]
+-- | Checks an open bracket is indented to the right of
+-- teh previous open bracket
+startBracket :: CharCoord                 -- ^ The bracket character
+             -> [CharCoord]               -- ^ The punctuation stack
+             -> Either String [CharCoord] -- ^ error, or updated punctuation stack
 startBracket bracket [] = Right [bracket]
 startBracket (ch,chloc) brackets@((_,bloc):_) = 
       if (col chloc) <= (col bloc) 
         then Left "Bad open"
         else Right $ (ch,chloc):brackets
 
-endBracket :: CharCoord -> [CharCoord] -> Either String [CharCoord]
+-- | Checks an end bracket is appropriately matched up
+endBracket :: CharCoord                 -- ^ The bracket character
+           -> [CharCoord]               -- ^ The punctuation 
+           -> Either String [CharCoord] -- ^ error, or updated punctuation stack
 endBracket _ [] = Left $ "End without open"
 endBracket (ch,_) ((b,_):btail) = 
     case ch of
@@ -111,11 +128,23 @@ endBracket (ch,_) ((b,_):btail) =
                 else Left "Expecting ')' but got '}'"
       _ -> Left $ "Unexpected end bracket char: " ++ show ch
     
-getCharCoord :: String -> [CharCoord]
-getCharCoord content = 
+-- | Converts a String into a list of CharCoords
+toCharCoords :: String -> [CharCoord]
+toCharCoords content = 
     let rows = zip (lines content) [0,1..]
     in concatMap getColVals rows
 
+-- | Converts a List of CharCoords into a String
+fromCharCoords :: [CharCoord] -> String
+fromCharCoords = fromCharCoords' 0
+  where
+    fromCharCoords' :: Int -> [CharCoord] -> String
+    fromCharCoords' _ [] = ""
+    fromCharCoords' row chars@((ch,(row',_)):remainder) =
+        if row == row'
+          then ch : fromCharCoords' row remainder
+          else '\n' : fromCharCoords' (row + 1) chars
 
+-- | Convert a String and a row into a list of char coords
 getColVals :: (String, Int) -> [CharCoord]
 getColVals (str,ln) = zip str $ zip (repeat ln) [0,1..]

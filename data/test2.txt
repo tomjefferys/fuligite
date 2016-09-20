@@ -6,5 +6,5 @@
 (print "There is a comment next")
 ; This is a comment (({{
 (print "o(ne\n")
-(print (+ 2 3) ")\n") 
+(print (+ 2 3) ")\n") ; another comment here! ';
 (print (addFive vartwo) "\n")
