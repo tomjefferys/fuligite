@@ -10,6 +10,7 @@ import HogueScript.FileLoader (loadFile)
 import qualified HogueScript.Zipper as Zipper
 
 import Control.Monad.State.Strict
+import Data.Maybe (fromMaybe)
 
 import qualified Data.Map.Strict as Map
 
@@ -33,7 +34,7 @@ runObjectFile obj = do
     
     
 runObject :: Object -> EvalMonad ()
-runObject obj = do
+runObject obj =
     -- Bind (but not evaluated) named properties
     -- execute numbered properties
     forM_ (Map.toList obj)
@@ -62,8 +63,8 @@ runPropFile props = do
         let eResult = runStateT (eval expr) (makeEvalState env mkObj)
         case eResult of
           Left err -> print err
-          Right (_,st) -> do
-            print $ maybe "" id (getStdOut st)
+          Right (_,st) -> 
+            print $ fromMaybe "" $ getStdOut st
 
       Nothing -> print "No main"
 

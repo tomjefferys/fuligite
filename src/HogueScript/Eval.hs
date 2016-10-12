@@ -18,11 +18,12 @@ eval expr =
             return $ case result of
                         Right zipper -> getZipperExpr zipper
                         Left _ -> Null
-        (Null) -> return Null
-        (Lit l) -> return $ Lit l
-        (Obj o) -> return $ Obj o
+        --Null -> return Null
+        --(Lit l) -> return $ Lit l
+        (Obj o) -> Obj <$> mapM eval o
         (Fapp path args) -> doFunc path args
-        _ -> undefined
+        e -> return e
+
 
 -- | Execute a function
 doFunc :: [String]          -- ^ The path to the function
@@ -47,14 +48,14 @@ userFunc params expr args = do
     -- bind arguments (When are arguments evaluated?)
     evalArgs <- mapM eval args
     let zipped = zip params evalArgs
-    mapM_ (\(param,arg) -> dv param arg) zipped
+    mapM_ dv zipped
 
     -- execute expr
     eval expr 
 
   where
-    dv :: String -> Expr -> EvalMonad Expr 
-    dv param arg = do
+    dv :: (String,Expr) -> EvalMonad Expr 
+    dv (param,arg) = do
       st <- get
       declareVar (Zipper.fromList $ getEnv st) param arg
 

@@ -6,7 +6,7 @@ module HogueScript.ObjectParser
 ) where
 
 import Text.ParserCombinators.Parsec
-import Control.Applicative hiding (many, (<|>))
+--import Control.Applicative hiding (many, (<|>))
 import Data.Map.Strict ()
 import qualified Data.Map.Strict as Map
 import Data.Foldable (foldl')
