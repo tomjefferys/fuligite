@@ -18,9 +18,8 @@ eval expr =
             return $ case result of
                         Right zipper -> getZipperExpr zipper
                         Left _ -> Null
-        --Null -> return Null
-        --(Lit l) -> return $ Lit l
-        (Obj o) -> Obj <$> mapM eval o
+        (Obj o) -> 
+          pushObj o *> (Obj <$> mapM eval o) <* popObj
         (Fapp path args) -> doFunc path args
         e -> return e
 

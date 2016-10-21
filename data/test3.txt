@@ -1,5 +1,54 @@
-(var a 5)
+(var a 4)
 (var b
  { a:10
    b:(fn {n} (+ a n)) })
 (print (b.b 7))
+
+# So we need to store the environments, these
+# don't need to be references since we can't access them
+# from anywhere
+# But what about the global environment?  These need to be
+# references as well
+# And therefore need to be garbage collected.
+# Can we use reference counting?  Could we ever get 
+# circular references to an environment
+#  can't think how.
+# If using references we don't need to use a zipper
+#  to hold references
+foo:
+(fn {} 
+  (do
+    (var c 3)
+    (var f2
+      (fn {}
+        (do
+          (var d 4)
+          (var f3 
+            (fn {} (+ c d))))))
+    (set c 4)
+    f2
+  )
+)
+
+# Objects can be accessed from anywhere, so we
+# need to know the object reference
+
+# how do we make new object
+
+(var build 
+  (fn {} 
+    (do
+      (var b 7)
+      { c:8
+        f:(fn {n} (+ n b c))
+      })))
+
+# function f can't just take a copy of of the object 
+# since we are returning the object and something else could change it
+# We can just take a copy of the environment, since nothing 
+# else can change it.
+
+# where do we store the object references, and do we need to garbage 
+# collect them?
+# Needs to be accessed globally
+

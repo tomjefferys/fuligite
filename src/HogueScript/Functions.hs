@@ -1,8 +1,8 @@
 -- | Built in functions 
 module HogueScript.Functions where
 
-import HogueScript.Expr (Expr(..), Object, BuiltIn(..), EvalMonad, getEnv)
-import HogueScript.Expr (PropError(..), EvalState, getObj, getIdentifier)
+import HogueScript.Expr (Expr(..), Object, BuiltIn(..), EvalMonad, getEnv,
+                          PropError(..), EvalState, getObj, getIdentifier)
 import HogueScript.ObjKey (ObjKey(..))
 import HogueScript.Eval (lookupPath, eval)
 import HogueScript.ObjZipper (ObjZipper, setZipperExpr, collapse)
@@ -49,6 +49,8 @@ fnVar _ = error "Illegal argument passed to var"
 
 -- function to set a variable
 -- (set expr expr)
+-- Deprectated, doesn't work properly
+-- Should probably just return a new object
 fnSet :: [Expr] -> EvalMonad Expr
 fnSet [name, value] = do
     st <- get
@@ -74,8 +76,22 @@ fnFn [params, def] = do
     let elems = Map.elems obj
     ids <- lift $ mapM getIdentifier elems
     let ids' = map (foldr1 (++)) ids
-    lift $ Right $ Fn ids' def
+    def' <- bindVariables elems def
+    lift $ Right $ Fn ids' def'
 fnFn args = lift $ Left $ BAD_ARGS args
+
+bindVariables :: [Expr] -> Expr -> EvalMonad Expr
+bindVariables params expr =
+  case expr of
+    g@(Get _) -> if g `elem` params
+                  then return g
+                  else eval g
+    (Fapp path exprs) -> 
+      Fapp path <$> mapM (bindVariables params) exprs
+    (Obj obj) -> 
+      Obj <$> mapM (bindVariables params) obj
+    _ -> return expr
+      
 
 -- appends the expressions to the variable __stdout
 fnPrint :: [Expr] -> EvalMonad Expr
@@ -102,7 +118,7 @@ fnPrint exprs = do
 -- function to execute multiple functions
 -- (do expr1 expr2 expr3)
 fnDo :: [Expr] -> EvalMonad Expr
-fnDo ([expr]) = eval expr
+fnDo [expr] = eval expr
 fnDo (expr:exprs) = do
     _ <- eval expr
     fnDo exprs
@@ -114,7 +130,7 @@ fnSum :: [Expr] -> EvalMonad Expr
 fnSum exprs = do
     literals <- mapM eval exprs
     summables <- promoteToSummables literals
-    return $ Lit $ foldr1 (add) summables
+    return $ Lit $ foldr1 add summables
   where
     add :: Literal -> Literal -> Literal
     add (B b1) (B b2) = B $ b1 || b2

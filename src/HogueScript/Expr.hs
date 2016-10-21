@@ -9,6 +9,7 @@ import Control.Monad.State.Strict
 -- The map of properties for an entity
 type Object = Map ObjKey Expr
 
+
 -- Represents components of an expression
 data Expr = Lit Literal |
             Obj Object |
@@ -66,6 +67,16 @@ popEnv = do
             (_:tl) -> st { getEnv = tl }
             []     -> st
     put st'
+
+pushObj :: Object -> EvalMonad ()
+pushObj obj = do
+    st <- get
+    put st { getObject = obj }
+
+popObj :: EvalMonad ()
+popObj = do
+    st <- get
+    put st { getObject = Map.empty } 
 
 -- The Monad stack used when evaluating expressions
 type EvalMonad = StateT EvalState (Either PropError)
