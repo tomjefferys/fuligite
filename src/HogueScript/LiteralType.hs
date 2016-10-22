@@ -5,13 +5,14 @@ module HogueScript.LiteralType where
 import HogueScript.Expr
 import HogueScript.Literal
 import Control.Monad.State.Strict
+import Control.Monad.Except
 import HogueScript.Eval
 import HogueScript.ObjKey
 
 -- | Represents something that can be coerced into an expression
 class LiteralType a where
     getExpr :: a -> Expr
-    fromExpr :: Expr -> EvalMonad a
+    fromExpr :: Expr -> EvalMonad2 a
 
 mkLit :: (LiteralType a) => a -> Expr
 mkLit = getExpr 
@@ -24,41 +25,41 @@ instance LiteralType Expr where
 instance LiteralType Char where
     getExpr c = Lit $ C c
     fromExpr (Lit (C c)) = return c
-    fromExpr (Lit _) = lift $ Left $ BAD_TYPE CHAR
+    fromExpr (Lit _) = throwError $ show $ BAD_TYPE CHAR
     fromExpr expr = eval expr >>= fromExpr
 
 -- | LiteralType instance for Ints
 instance LiteralType Int where
     getExpr n = Lit $ I n
     fromExpr (Lit (I i)) = return i
-    fromExpr (Lit _) = lift $ Left $ BAD_TYPE INT
+    fromExpr (Lit _) = throwError $ show $ BAD_TYPE INT
     fromExpr expr = eval expr >>= fromExpr
 
 -- | LiteralType instance for floats
 instance LiteralType Float where
     getExpr f = Lit $ F f
     fromExpr (Lit (F i)) = return i
-    fromExpr (Lit _) = lift $ Left $ BAD_TYPE FLOAT
+    fromExpr (Lit _) = throwError $ show $ BAD_TYPE FLOAT
     fromExpr expr = eval expr >>= fromExpr
 
 -- | LiteralType instance for booleans
 instance LiteralType Bool where
     getExpr b = Lit $ B b
     fromExpr (Lit (B b)) = return b
-    fromExpr (Lit _) = lift $ Left $ BAD_TYPE BOOL 
+    fromExpr (Lit _) = throwError $ show $ BAD_TYPE BOOL 
     fromExpr expr = eval expr >>= fromExpr
 
 -- | LiteralType instance for Strings (requires FlexibileInstances)
 instance LiteralType String where
     getExpr s = Lit $ S s
     fromExpr (Lit (S s)) = return s
-    fromExpr (Lit _) = lift $ Left $ BAD_TYPE STRING
+    fromExpr (Lit _) = throwError $ show $ BAD_TYPE STRING
     fromExpr expr = eval expr >>= fromExpr
 
 instance LiteralType Object where
     getExpr = Obj
     fromExpr (Obj o) = return o
-    fromExpr (Lit _) = lift $ Left $ BAD_TYPE OBJECT
+    fromExpr (Lit _) = throwError $ show $ BAD_TYPE OBJECT
     fromExpr expr = eval expr >>= fromExpr
 
 -- | Evaluates a property and returns it's value, using 

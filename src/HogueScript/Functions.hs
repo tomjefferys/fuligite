@@ -1,7 +1,7 @@
 -- | Built in functions 
 module HogueScript.Functions where
 
-import HogueScript.Expr (Expr(..), Object, BuiltIn(..), EvalMonad, getEnv,
+import HogueScript.Expr (Expr(..), Object, BuiltIn(..), EvalMonad2, getEnv,
                           PropError(..), EvalState, getObj, getIdentifier)
 import HogueScript.ObjKey (ObjKey(..))
 import HogueScript.Eval (lookupPath, eval)
@@ -12,6 +12,7 @@ import HogueScript.Literal (
 
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
+import Control.Monad.Except
 
 defaultEnv :: Object
 defaultEnv = Map.fromList [
@@ -26,7 +27,7 @@ defaultEnv = Map.fromList [
 
 -- function to declare a variable
 -- (var name expr)
-fnVar :: [Expr] -> EvalMonad Expr
+fnVar :: [Expr] -> EvalMonad2 Expr
 fnVar [name,value] = do
     value' <- eval value
     let setVar =
@@ -51,7 +52,7 @@ fnVar _ = error "Illegal argument passed to var"
 -- (set expr expr)
 -- Deprectated, doesn't work properly
 -- Should probably just return a new object
-fnSet :: [Expr] -> EvalMonad Expr
+fnSet :: [Expr] -> EvalMonad2 Expr
 fnSet [name, value] = do
     st <- get
     zipper <- case name of
@@ -70,17 +71,17 @@ fnSet [name, value] = do
 fnSet _ = error "Illegal argument passed to set"
 
 -- function definition
-fnFn :: [Expr] -> EvalMonad Expr
+fnFn :: [Expr] -> EvalMonad2 Expr
 fnFn [params, def] = do
-    obj <- lift $ getObj params
+    obj <- getObj params
     let elems = Map.elems obj
-    ids <- lift $ mapM getIdentifier elems
+    ids <-  mapM getIdentifier elems
     let ids' = map (foldr1 (++)) ids
     def' <- bindVariables elems def
-    lift $ Right $ Fn ids' def'
-fnFn args = lift $ Left $ BAD_ARGS args
+    return $ Fn ids' def'
+fnFn args = throwError $ show $ BAD_ARGS args
 
-bindVariables :: [Expr] -> Expr -> EvalMonad Expr
+bindVariables :: [Expr] -> Expr -> EvalMonad2 Expr
 bindVariables params expr =
   case expr of
     g@(Get _) -> if g `elem` params
@@ -94,30 +95,30 @@ bindVariables params expr =
       
 
 -- appends the expressions to the variable __stdout
-fnPrint :: [Expr] -> EvalMonad Expr
+fnPrint :: [Expr] -> EvalMonad2 Expr
 fnPrint exprs = do
     buffer <- eval (Get ["stdout"])
-    stdout <- lift $ case buffer of
-                Null -> Right ""
-                (Lit (S val)) -> Right val
-                _ -> Left $ INVALID_EXPR buffer "stdout is not string" 
+    stdout <- case buffer of
+                Null -> return ""
+                (Lit (S val)) -> return val
+                _ -> throwError $ show $ INVALID_EXPR buffer "stdout is not string" 
     str <- foldM concatExpr "" exprs
     let stdout' = stdout ++ str
     _ <- fnSet [Get ["stdout"], Lit $ S stdout']
     return $ Lit $ S stdout'
   where
-    concatExpr :: String -> Expr -> EvalMonad String
+    concatExpr :: String -> Expr -> EvalMonad2 String
     concatExpr acc expr = do
        result <- eval expr
-       lift $ case result of
-                (Lit lit) -> Right $ acc ++ toString lit ++ "\n"
-                _ -> Left $
+       case result of
+                (Lit lit) -> return $ acc ++ toString lit ++ "\n"
+                _ -> throwError $ show $
                    INVALID_EXPR result "expression is not printable"
     
 
 -- function to execute multiple functions
 -- (do expr1 expr2 expr3)
-fnDo :: [Expr] -> EvalMonad Expr
+fnDo :: [Expr] -> EvalMonad2 Expr
 fnDo [expr] = eval expr
 fnDo (expr:exprs) = do
     _ <- eval expr
@@ -126,7 +127,7 @@ fnDo _ = error "Illegal argument passed to do"
 
 -- Sum function, adds up arguments
 {-# ANN fnSum "HLint: ignore Use sum" #-}
-fnSum :: [Expr] -> EvalMonad Expr
+fnSum :: [Expr] -> EvalMonad2 Expr
 fnSum exprs = do
     literals <- mapM eval exprs
     summables <- promoteToSummables literals
@@ -141,13 +142,13 @@ fnSum exprs = do
     add _ _ = error "Attempting to add different literal types"
 
         
-promoteToSummables :: [Expr] -> EvalMonad [Literal]
+promoteToSummables :: [Expr] -> EvalMonad2 [Literal]
 promoteToSummables exprs = do
     literals <- mapM toLiteral exprs
     let commonType = foldr1 getCommonType $ fmap getType literals
     return $ map (promoteLit commonType) literals
   where
-    toLiteral :: Expr -> EvalMonad Literal
+    toLiteral :: Expr -> EvalMonad2 Literal
     toLiteral expr = do
       result <- eval expr
       case result of 

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module HogueScript.Eval where
 
 import HogueScript.Expr
@@ -8,9 +9,12 @@ import HogueScript.Zipper (Zipper)
 import qualified HogueScript.Zipper as Zipper
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
+import Control.Monad.Except
+import Control.Monad.Identity
 
 -- | Evaluate an expression
-eval :: Expr -> EvalMonad Expr
+--eval :: Expr -> EvalMonad Expr
+eval :: Expr -> EvalMonad2 Expr
 eval expr = 
     case expr of
         (Get prop) -> do
@@ -27,7 +31,7 @@ eval expr =
 -- | Execute a function
 doFunc :: [String]          -- ^ The path to the function
        -> [Expr]            -- ^ The function arguments
-       -> EvalMonad Expr
+       -> EvalMonad2 Expr
 doFunc path args = do
     -- lookup name, first in obj, then env
     fun <- lookupPath $ fmap StrKey path
@@ -41,7 +45,7 @@ doFunc path args = do
     return result
 
 -- | Execute a user defined function
-userFunc :: [String] -> Expr -> [Expr] -> EvalMonad Expr
+userFunc :: [String] -> Expr -> [Expr] -> EvalMonad2 Expr
 userFunc params expr args = do
 
     -- bind arguments (When are arguments evaluated?)
@@ -53,7 +57,7 @@ userFunc params expr args = do
     eval expr 
 
   where
-    dv :: (String,Expr) -> EvalMonad Expr 
+    dv :: (String,Expr) -> EvalMonad2 Expr 
     dv (param,arg) = do
       st <- get
       declareVar (Zipper.fromList $ getEnv st) param arg
@@ -63,7 +67,7 @@ userFunc params expr args = do
 declareVar :: Zipper Object -- ^ A zipper to the environment
            -> String -- ^ The variable neme
            -> Expr   -- ^ The value of this variable
-           -> EvalMonad Expr
+           -> EvalMonad2 Expr
 declareVar envZip name value = do
     value' <- eval value
     let setVar = Map.insert (StrKey name) value'
@@ -89,7 +93,7 @@ setObj obj st = st { getObject = obj }
 -- | Lookups up a path
 -- Checks in the local object, then in the environment
 lookupPath :: [ObjKey] -- ^ The path
-           -> EvalMonad (Either PropError ObjZipper)
+           -> EvalMonad2 (Either PropError ObjZipper)
 lookupPath path = do
     obj <- fmap getObject get
     env <- fmap getEnv get
@@ -119,7 +123,7 @@ logFailure :: String    -- ^ The failure message
 logFailure str evalSt = evalSt { failure = Just str }
 
 -- | Set a property of the local object to an expression.
-setPropM :: [ObjKey] -> Expr -> EvalMonad Expr
+setPropM :: [ObjKey] -> Expr -> EvalMonad2 Expr
 setPropM [propName] value = do
     propMap <- fmap getObject get
     let oldExpr = Map.findWithDefault Null propName propMap
@@ -143,37 +147,46 @@ makeEvalState env obj =
 evalPropString :: [ObjKey]
                -> Object
                -> Object
-               -> (Either PropError) String
+               -> (Either String) String
 evalPropString path env obj = 
-    evalStateT (getProp path >>= evalToString) (makeEvalState env obj)
+    let state = makeEvalState env obj
+        run = runEM evalFn 
+        run' = evalStateT run state
+        run'' = runExceptT run'
+    in runIdentity run''
   where
-    evalToString :: Expr -> EvalMonad String
+    evalFn :: EvalMonad2 String
+    evalFn = getProp path >>= evalToString
+    evalToString :: Expr -> EvalMonad2 String
     evalToString (Lit l) = return $ toString l
     evalToString expr = eval expr >>= evalToString
 
 -- | Get the expression associated with a property
-getProp :: [ObjKey] -> EvalMonad Expr
+getProp :: [ObjKey] -> EvalMonad2 Expr
 getProp props = do
     obj <- fmap getObject get
-    lift $ getPropFromObj props $ Obj obj
+    getPropFromObj props $ Obj obj
 
-getPropFromObj :: [ObjKey] -> Expr -> Either PropError Expr
+getPropFromObj :: (MonadError String m)
+                    => [ObjKey]
+                    -> Expr
+                    -> m Expr
 getPropFromObj (prop:subprops) (Obj obj) = do
     let mVal = Map.lookup prop obj
     val <- case mVal of
-            Just val -> Right val
-            Nothing -> Left $ NO_SUCH_PROP prop
+            Just val -> return val
+            Nothing -> throwError $ show $  NO_SUCH_PROP prop
     case subprops of
-      [] -> Right val
+      [] -> return val
       _ -> getPropFromObj subprops val
 getPropFromObj (prop:_) _ =
-    Left $ NO_SUCH_PROP prop
+    throwError $ show $ NO_SUCH_PROP prop
 getPropFromObj [] _ =
-    Left $ NO_SUCH_PROP $ StrKey "[]"
+    throwError $ show $ NO_SUCH_PROP $ StrKey "[]"
 
 -- | Log a failure.  Not an error in the code, but 
 -- an expected failure (eg trying to open an open door)
-failExpr :: String -> EvalMonad Expr
+failExpr :: String -> EvalMonad2 Expr
 failExpr str = do
     modify $ logFailure str
     return Null

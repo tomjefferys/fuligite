@@ -38,3 +38,5 @@ run st = do
 
 evaluate :: Expr -> EvalState -> Either PropError (Expr, EvalState)
 evaluate expr = runStateT (eval expr) 
+
+

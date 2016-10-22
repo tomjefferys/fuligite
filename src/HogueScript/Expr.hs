@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
 module HogueScript.Expr where
 
 import HogueScript.Literal
@@ -5,6 +7,8 @@ import HogueScript.ObjKey
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
+import Control.Monad.Except
+import Control.Monad.Identity
 
 -- The map of properties for an entity
 type Object = Map ObjKey Expr
@@ -20,22 +24,27 @@ data Expr = Lit Literal |
             Null 
             deriving (Ord, Eq, Show)
 
-getObj :: Expr -> Either PropError Object
+getObj :: (MonadError String m) 
+            => Expr
+            -> m Object 
+--Either PropError Object
 getObj expr =
     case expr of
-      Obj obj -> Right obj
-      _ -> Left $ BAD_TYPE OBJECT
+      Obj obj -> return obj
+      _ -> throwError $ show $ BAD_TYPE OBJECT
 
-getIdentifier :: Expr -> Either PropError [String]
+getIdentifier :: (MonadError String m)
+                  => Expr
+                  -> m [String]
 getIdentifier expr =
     case expr of
-      Get path -> Right path
-      _ -> Left $ MSSG $ "Not Get: " ++ show expr
+      Get path -> return path
+      _ -> throwError $ show $ MSSG $ "Not Get: " ++ show expr
 
 
 -- Type for a builtin function
 -- Takes a name and the function itself
-data BuiltIn = BuiltIn String ([Expr] -> EvalMonad Expr)
+data BuiltIn = BuiltIn String ([Expr] -> EvalMonad2 Expr)
 
 instance Ord BuiltIn where
     compare (BuiltIn name1 _) (BuiltIn name2 _) = 
@@ -54,12 +63,12 @@ data EvalState =
         getObject :: Object,
         failure :: Maybe String }
 
-pushEnv :: EvalMonad ()
+pushEnv :: EvalMonad2 ()
 pushEnv = do
     st <- get
     put st { getEnv = Map.empty : getEnv st }
 
-popEnv :: EvalMonad ()
+popEnv :: EvalMonad2 ()
 popEnv = do
     st <- get
     let st' =
@@ -68,18 +77,26 @@ popEnv = do
             []     -> st
     put st'
 
-pushObj :: Object -> EvalMonad ()
+pushObj :: (MonadState EvalState m) => Object -> m ()
 pushObj obj = do
     st <- get
     put st { getObject = obj }
 
-popObj :: EvalMonad ()
+popObj :: EvalMonad2 ()
 popObj = do
     st <- get
     put st { getObject = Map.empty } 
 
 -- The Monad stack used when evaluating expressions
-type EvalMonad = StateT EvalState (Either PropError)
+--type EvalMonad = StateT EvalState (Either PropError)
+
+newtype EvalMonad2 a = EvalMonad2 {
+    runEM :: StateT EvalState (ExceptT String Identity) a
+} deriving (Functor,
+            Applicative,
+            Monad,
+            MonadState EvalState,
+            MonadError String)
 
 data Type = BOOL | CHAR | STRING | INT | FLOAT | OBJECT
             deriving (Show, Eq)
