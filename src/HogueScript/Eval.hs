@@ -10,7 +10,6 @@ import qualified HogueScript.Zipper as Zipper
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 import Control.Monad.Except
-import Control.Monad.Identity
 
 -- | Evaluate an expression
 --eval :: Expr -> EvalMonad Expr
@@ -149,17 +148,14 @@ evalPropString :: [ObjKey]
                -> Object
                -> (Either String) String
 evalPropString path env obj = 
-    let state = makeEvalState env obj
-        run = runEM evalFn 
-        run' = evalStateT run state
-        run'' = runExceptT run'
-    in runIdentity run''
+    evalEM (makeEvalState env obj) evalFn
   where
     evalFn :: EvalMonad2 String
     evalFn = getProp path >>= evalToString
     evalToString :: Expr -> EvalMonad2 String
     evalToString (Lit l) = return $ toString l
     evalToString expr = eval expr >>= evalToString
+
 
 -- | Get the expression associated with a property
 getProp :: [ObjKey] -> EvalMonad2 Expr

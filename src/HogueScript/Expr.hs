@@ -98,6 +98,18 @@ newtype EvalMonad2 a = EvalMonad2 {
             MonadState EvalState,
             MonadError String)
 
+evalEM :: EvalState -> EvalMonad2 a -> Either String a
+evalEM st fn = runIdentity
+               $ runExceptT
+               $ evalStateT (runEM fn) st
+
+doEM :: EvalState -> EvalMonad2 a -> Either String (a, EvalState)
+doEM st fn = runIdentity
+              $ runExceptT
+              $ runStateT (runEM fn) st
+
+
+
 data Type = BOOL | CHAR | STRING | INT | FLOAT | OBJECT
             deriving (Show, Eq)
 data PropError = BAD_TYPE Type --Type

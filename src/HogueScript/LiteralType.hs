@@ -4,7 +4,6 @@ module HogueScript.LiteralType where
 
 import HogueScript.Expr
 import HogueScript.Literal
-import Control.Monad.State.Strict
 import Control.Monad.Except
 import HogueScript.Eval
 import HogueScript.ObjKey
@@ -68,9 +67,9 @@ evalProp :: (LiteralType a)
          => [ObjKey] -- ^ The name of the property
          -> Object -- ^ The environment
          -> Object -- ^ The object to evaluate
-         -> (Either PropError) a -- ^ The result
+         -> (Either String) a -- ^ The result
 evalProp path env obj =
-    evalStateT (getProp path >>= fromExpr) (makeEvalState env obj)
+  evalEM (makeEvalState env obj) (getProp path >>= fromExpr)
 
 defaultProp :: (LiteralType a)
             => a

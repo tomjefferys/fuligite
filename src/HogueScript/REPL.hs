@@ -3,7 +3,6 @@ module HogueScript.REPL where
 import HogueScript.ObjectParser
 import HogueScript.Object
 import Control.Monad
-import Control.Monad.State.Strict
 import Text.ParserCombinators.Parsec
 import HogueScript.Eval
 import HogueScript.Expr
@@ -23,7 +22,7 @@ run st = do
             return st
           Right expr -> do
             print expr
-            let result = evaluate expr st
+            let result = evaluate st expr 
             case result of
               Left err -> do
                 print err
@@ -36,7 +35,7 @@ run st = do
     when (line /= "") $ run st'
 
 
-evaluate :: Expr -> EvalState -> Either PropError (Expr, EvalState)
-evaluate expr = runStateT (eval expr) 
+evaluate :: EvalState -> Expr -> Either String (Expr, EvalState)
+evaluate st expr = doEM st (eval expr) 
 
 

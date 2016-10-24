@@ -3,7 +3,8 @@ module HogueScript.RunFile where
 import HogueScript.Functions (defaultEnv)
 import HogueScript.Object (mkObj)
 import HogueScript.ObjKey (ObjKey(..))
-import HogueScript.Expr (Expr(..), EvalState(..), Object, EvalMonad)
+import HogueScript.Expr (Expr(..), EvalState(..), Object,
+                          EvalMonad2, doEM)
 import HogueScript.Eval (makeEvalState, eval, declareVar)
 import HogueScript.Literal (toString)
 import HogueScript.FileLoader (loadFile)
@@ -22,7 +23,8 @@ runFile fileName = do
 runObjectFile :: Object -> IO ()
 runObjectFile obj = do
     let st = makeEvalState defaultEnv mkObj
-    let eResult = runStateT (runObject obj) st
+    --let eResult = runStateT (runObject obj) st
+    let eResult = doEM st (runObject obj)
     let (str, st') = case eResult of
                     Left err -> (show err, st)
                     Right (_, st'') -> ("OK", st'')
@@ -33,7 +35,7 @@ runObjectFile obj = do
         _ -> print ""
     
     
-runObject :: Object -> EvalMonad ()
+runObject :: Object -> EvalMonad2 ()
 runObject obj =
     -- Bind (but not evaluated) named properties
     -- execute numbered properties
@@ -44,7 +46,7 @@ runObject obj =
               (NumKey _, expr) -> eval expr
               (NullKey, _) -> error "Unexpected NullKey found")
   where
-    bindExpr :: String -> Expr -> EvalMonad Expr
+    bindExpr :: String -> Expr -> EvalMonad2 Expr
     bindExpr key expr = do
       env <- fmap getEnv get
       declareVar (Zipper.fromList env) key expr
@@ -60,7 +62,7 @@ runPropFile props = do
     let mMain = Map.lookup (StrKey "main") env
     case mMain of
       Just expr -> do
-        let eResult = runStateT (eval expr) (makeEvalState env mkObj)
+        let eResult = doEM (makeEvalState env mkObj) (eval expr)
         case eResult of
           Left err -> print err
           Right (_,st) -> 
