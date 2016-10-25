@@ -88,8 +88,6 @@ popObj = do
     put st { getObject = Map.empty } 
 
 -- The Monad stack used when evaluating expressions
---type EvalMonad = StateT EvalState (Either PropError)
-
 newtype EvalMonad2 a = EvalMonad2 {
     runEM :: StateT EvalState (ExceptT String Identity) a
 } deriving (Functor,

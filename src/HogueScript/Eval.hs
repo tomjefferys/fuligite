@@ -12,7 +12,6 @@ import Control.Monad.State.Strict
 import Control.Monad.Except
 
 -- | Evaluate an expression
---eval :: Expr -> EvalMonad Expr
 eval :: Expr -> EvalMonad2 Expr
 eval expr = 
     case expr of
@@ -38,28 +37,23 @@ doFunc path args = do
                 Right (ObjZipper _ _ (HFn (BuiltIn _ fn'))) -> fn'
                 Right (ObjZipper _ _ (Fn params def)) -> userFunc params def
                 _ -> error ("unknown function" ++ show path)
-    pushEnv 
-    result <- fn args
-    popEnv
-    return result
+    pushEnv *> fn args <* popEnv
 
 -- | Execute a user defined function
 userFunc :: [String] -> Expr -> [Expr] -> EvalMonad2 Expr
 userFunc params expr args = do
-
-    -- bind arguments (When are arguments evaluated?)
+    -- bind and evaluate arguments 
     evalArgs <- mapM eval args
     let zipped = zip params evalArgs
     mapM_ dv zipped
-
     -- execute expr
     eval expr 
 
   where
     dv :: (String,Expr) -> EvalMonad2 Expr 
     dv (param,arg) = do
-      st <- get
-      declareVar (Zipper.fromList $ getEnv st) param arg
+      env <- getEnv <$> get
+      declareVar (Zipper.fromList env) param arg
 
 -- function to declare a variable
 -- (var name expr)
@@ -72,15 +66,11 @@ declareVar envZip name value = do
     let setVar = Map.insert (StrKey name) value'
 
     st <- get
-    -- shift the zipper right as we need to set the variable in the
-    -- super environment
-    -- for binding of params we don't want to do this
-    --let envZip = Zipper.right $ Zipper.fromList $ getEnv st
     let envs =  maybe
                  (getEnv st)
                  (Zipper.toList . Zipper.set envZip . setVar)
                  (Zipper.get envZip)
-    put $ st { getEnv =  envs }
+    put $ st { getEnv = envs }
     return value'
 
 setEnv :: Zipper Object -> StateSetter
