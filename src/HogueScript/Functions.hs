@@ -2,7 +2,9 @@
 module HogueScript.Functions where
 
 import HogueScript.Expr (Expr(..), Object, BuiltIn(..), EvalMonad2, getEnv,
-                          PropError(..), EvalState, getObj, getIdentifier)
+                          PropError(..), EvalState, getObj, getIdentifier,
+                          parent, getEnvById, setEnvById, setVariable,
+                          setObj)
 import HogueScript.ObjKey (ObjKey(..))
 import HogueScript.Eval (lookupPath, eval)
 import HogueScript.ObjZipper (ObjZipper, setZipperExpr, collapse)
@@ -18,7 +20,7 @@ defaultEnv :: Object
 defaultEnv = Map.fromList [
       (StrKey "stdout", Lit $ S ""),
       (StrKey "var", HFn $ BuiltIn "var" fnVar),
-      (StrKey "set", HFn $ BuiltIn "set" fnSet),
+      --(StrKey "set", HFn $ BuiltIn "set" fnSet),
       (StrKey "do", HFn $ BuiltIn "do" fnDo),
       (StrKey "fn", HFn $ BuiltIn "fn" fnFn),
       (StrKey "+", HFn $ BuiltIn "+" fnSum),
@@ -30,21 +32,40 @@ defaultEnv = Map.fromList [
 fnVar :: [Expr] -> EvalMonad2 Expr
 fnVar [name,value] = do
     value' <- eval value
-    let setVar =
+    --let setVar =
+    --      case name of
+    --        (Get [identifier]) -> Map.insert (StrKey identifier) value'
+    --        _ -> id
+    let ident =
           case name of
-            (Get [identifier]) -> Map.insert (StrKey identifier) value'
-            _ -> id
+            (Get [i]) -> i
+            _ -> throwError "Bad name passed to var"
+              
+    mEId <- parent <$> getEnv
+    eid <- case mEId of
+            (Just e) -> return e
+            _ -> throwError "Can't get environment"
+    env <- getEnvById eid
 
-    st <- get
-    -- shift the zipper right as we need to set the variable in the
-    -- super environment
-    let envZip = Zipper.right $ Zipper.fromList $ getEnv st
-    let envs = maybe
-                 (getEnv st)
-                 (Zipper.toList . Zipper.set envZip . setVar)
-                 (Zipper.get envZip)
-    put $ st { getEnv = envs }
+    let env' = setVariable (StrKey ident) value env
+    setEnvById eid env'
+
     return value'
+
+          
+    
+    
+
+    --st <- get
+    ---- shift the zipper right as we need to set the variable in the
+    ---- super environment
+    --let envZip = Zipper.right $ Zipper.fromList $ getEnv st
+    --let envs = maybe
+    --             (getEnv st)
+    --             (Zipper.toList . Zipper.set envZip . setVar)
+    --             (Zipper.get envZip)
+    --put $ st { getEnv = envs }
+    --return value'
 
 fnVar _ = error "Illegal argument passed to var"
 
@@ -57,7 +78,7 @@ fnSet [name, value] = do
     st <- get
     zipper <- case name of
                 (Get path) -> lookupPath $ fmap StrKey path
-                _ -> return $ Left $ MSSG "Not a path"
+                _ -> throwError "Not a path"
     put $ either (const st) (doSet st value) zipper
     return value
   where
@@ -89,9 +110,12 @@ bindVariables params expr =
                   else eval g
     (Fapp path exprs) -> 
       Fapp path <$> mapM (bindVariables params) exprs
-    (Obj obj) -> 
-      Obj <$> mapM (bindVariables params) obj
-    _ -> return expr
+    o@(Obj _) -> do
+      obj <- getObj o     
+      obj' <- mapM (bindVariables params) obj
+      objId <- setObj obj'
+      return $ Obj objId
+     -- Obj <$>     _ -> return expr
       
 
 -- appends the expressions to the variable __stdout

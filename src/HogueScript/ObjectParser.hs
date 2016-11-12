@@ -112,7 +112,7 @@ object :: Parser Expr
 object = try $ mkObj <$> (char '{' *> spaces *> objectbody <* char '}')
 
 mkObj :: [(ObjKey, Expr)] -> Expr
-mkObj props = Obj $ fst
+mkObj props = ObjDef $ fst
                  $ foldl' (\(mp,index) (prop,expr) -> 
                         case prop of
                           NullKey -> (Map.insert (NumKey index) expr mp, 

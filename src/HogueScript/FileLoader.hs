@@ -46,7 +46,7 @@ doParse :: String -> Object
 doParse content =
     case parse objectfile "error" content of
         Left err -> error $ show err
-        Right (Obj obj) -> obj
+        Right (ObjDef obj) -> obj
         Right _ -> error "File did not return object"
 
 

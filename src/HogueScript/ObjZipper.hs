@@ -22,7 +22,7 @@ setZipperExpr (ObjZipper setter path _) = ObjZipper setter path
 getField :: ObjZipper -> ObjKey -> Either PropError ObjZipper
 getField (ObjZipper updater path expr) field = 
     case expr of
-      (Obj obj) -> case Map.lookup field obj of
+      (ObjDef obj) -> case Map.lookup field obj of
                      Just result -> Right
                              $ ObjZipper updater ((obj,field):path) result
                      Nothing -> Left $ NO_SUCH_PROP field
@@ -39,4 +39,4 @@ collapse :: ObjZipper -> (StateSetter, Expr)
 collapse (ObjZipper updater [] expr) = (updater,expr)
 collapse (ObjZipper updater ((obj,field):path) expr) = 
     collapse $
-        ObjZipper updater path $ Obj $ Map.insert field expr obj
+        ObjZipper updater path $ ObjDef $ Map.insert field expr obj

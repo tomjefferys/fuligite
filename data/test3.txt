@@ -35,13 +35,39 @@ foo:
 
 # how do we make new object
 
+# returning an object, with references to an object field
+# and a closed over variable
 (var build 
   (fn {} 
     (do
       (var b 7)
       { c:8
         f:(fn {n} (+ n b c))
+        f2:(fn {n} (set c (+ n b)))
+        f3:(fn {n} (set b (+ n c)))
       })))
+
+# since f, f2, and f3 reference the same environment
+# environments need to be stored as references
+
+# the returned object does not need to reference the envs,
+# only the functions
+
+# so objects need to be stored as references also?
+
+# TODO create Environment, and Object types
+
+# returning a function with closure
+(var build
+  (fn {}
+    (do
+      (var b 7)
+      (fn {n}
+        (do
+          (set b n)
+          n)))))
+
+
 
 # function f can't just take a copy of of the object 
 # since we are returning the object and something else could change it
