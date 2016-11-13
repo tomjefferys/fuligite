@@ -85,7 +85,7 @@ instance Show BuiltIn where
 
 -- | Variable type, consists of variables owner,
 -- and name
-data Variable = EnvVar EnvId String | ObjVar ObjId String
+data Variable = EnvVar EnvId ObjKey | ObjVar ObjId ObjKey
 
 -- The state of evaluation of a property expression
 data EvalState =

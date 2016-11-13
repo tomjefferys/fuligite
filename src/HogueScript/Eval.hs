@@ -11,6 +11,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.IntMap as IntMap
 import Control.Monad.State.Strict
 import Control.Monad.Except
+import qualified HogueScript.Environment as Env
 
 -- | Evaluate an expression
 eval :: Expr -> EvalMonad2 Expr
