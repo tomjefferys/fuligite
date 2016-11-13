@@ -4,7 +4,7 @@ module HogueScript.Functions where
 import HogueScript.Expr (Expr(..), Object, BuiltIn(..), EvalMonad2, getEnv,
                           PropError(..), EvalState, getObj, getIdentifier,
                           parent, getEnvById, setEnvById, setVariable,
-                          setObj)
+                          setObj, setVar, getEnvId)
 import HogueScript.ObjKey (ObjKey(..))
 import HogueScript.Eval (lookupPath, eval)
 import HogueScript.ObjZipper (ObjZipper, setZipperExpr, collapse)
@@ -15,6 +15,10 @@ import HogueScript.Literal (
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 import Control.Monad.Except
+import HogueScript.Path (Path)
+import qualified HogueScript.Path as Path
+import qualified HogueScript.Environment as Env
+import Data.Maybe
 
 defaultEnv :: Object
 defaultEnv = Map.fromList [
@@ -36,9 +40,9 @@ fnVar [name,value] = do
     --      case name of
     --        (Get [identifier]) -> Map.insert (StrKey identifier) value'
     --        _ -> id
-    let ident =
+    ident <-
           case name of
-            (Get [i]) -> i
+            (Get [i]) -> return i
             _ -> throwError "Bad name passed to var"
               
     mEId <- parent <$> getEnv
@@ -76,19 +80,32 @@ fnVar _ = error "Illegal argument passed to var"
 fnSet :: [Expr] -> EvalMonad2 Expr
 fnSet [name, value] = do
     st <- get
-    zipper <- case name of
-                (Get path) -> lookupPath $ fmap StrKey path
+    path <- case name of
+                (Get path) -> return $ Path.fromList $ StrKey <$> path
                 _ -> throwError "Not a path"
-    put $ either (const st) (doSet st value) zipper
+    mVar <- Env.lookupVar path $ getEnvId st
+    case mVar of
+      Just var -> setVar var value
+      Nothing -> return ()
     return value
-  where
-    doSet :: EvalState -> Expr -> ObjZipper -> EvalState
-    doSet st val zipper = 
-      let zipper' = setZipperExpr zipper val
-          (setter, expr) = collapse zipper'
-      in case expr of
-           (Obj obj) -> setter obj st 
-           _ -> error "collapse should return an object"
+
+--    fromMaybe () (setVar path) mVar
+
+    
+    
+--    zipper <- case name of
+--                (Get path) -> lookupPath $ fmap StrKey path
+--                _ -> throwError "Not a path"
+--    put $ either (const st) (doSet st value) zipper
+--    return value
+--  where
+--    doSet :: EvalState -> Expr -> ObjZipper -> EvalState
+--    doSet st val zipper = 
+--      let zipper' = setZipperExpr zipper val
+--          (setter, expr) = collapse zipper'
+--      in case expr of
+--           (Obj obj) -> setter obj st 
+--           _ -> error "collapse should return an object"
 fnSet _ = error "Illegal argument passed to set"
 
 -- function definition

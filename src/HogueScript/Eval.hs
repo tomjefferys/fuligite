@@ -12,13 +12,15 @@ import qualified Data.IntMap as IntMap
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import qualified HogueScript.Environment as Env
+import HogueScript.Path (Path)
+import qualified HogueScript.Path as Path
 
 -- | Evaluate an expression
 eval :: Expr -> EvalMonad2 Expr
 eval expr = 
     case expr of
         (Get prop) -> do
-            mExpr <- lookupPath (fmap StrKey prop)
+            mExpr <- lookupPath $ Path.fromList $ fmap StrKey prop
             return $ case mExpr of
                         Just expr -> expr
                         _ -> Null
@@ -39,7 +41,7 @@ doFunc :: [String]          -- ^ The path to the function
        -> EvalMonad2 Expr
 doFunc path args = do
     -- lookup name, first in obj, then env
-    fun <- lookupPath $ fmap StrKey path
+    fun <- lookupPath $ Path.fromList $ fmap StrKey path
     let fn = case fun of
                 Just (HFn (BuiltIn _ fn')) -> fn'
                 Just (Fn params def) -> userFunc params def
@@ -73,33 +75,25 @@ declareVar name value = do
          return $ env { getState = Map.insert key value envState }
   setEnv env'
   return value
-  
---setObj :: StateSetter
---setObj obj st = st { getObject = obj }
 
-lookupPath :: [ObjKey] -> EvalMonad2 (Maybe Expr)
+
+lookupPath :: Path -> EvalMonad2 (Maybe Expr)
 lookupPath path = do
-  env <- getEnv
-  mEnv <- findEnv path env
-  case mEnv of
-    Just (_, expr, path) -> findExpr path expr
+  eid <- getEnvId <$> get
+  mVar <- Env.lookupVar path eid
+  case mVar of
+    Just var -> getVar var
     Nothing -> return Nothing
-    
-  --findExpr path 
-  --lookupEnvs env path
-  --let stateObj = getState env
-  --return Nothing
-  -- lookup sateObj.__self
 
-findEnv :: [ObjKey] -> Env -> EvalMonad2 (Maybe (Env,Expr,[ObjKey]))
-findEnv [] env = return Nothing
-findEnv p@(name:remainder) env = 
-  case Map.lookup name (getState env) of
-    Just expr -> return $ Just (env, expr, remainder)
-    Nothing -> maybe (return Nothing) (findEnv p) $ getParent env 
-    --  if Map.member name env
-    --    then return $ Just (env, remainder)
-    --    else maybe (return Nothing) (findEnv p) $ getParent env
+setPath :: Path -> Expr -> EvalMonad2 ()
+setPath path expr = do
+  eid <- getEnvId <$> get
+  mVar <- Env.lookupVar path eid
+  case mVar of
+    Just var -> setVar var expr
+    Nothing -> return ()
+
+
 
 findExpr :: [ObjKey] -> Expr -> EvalMonad2 (Maybe Expr)
 findExpr [] expr = return $ Just expr
@@ -112,19 +106,19 @@ findExpr (name:remainder) expr =
         Nothing -> return Nothing
     _ -> return Nothing
 
-setPath :: [ObjKey] -> Expr -> EvalMonad2 ()
-setPath [] _ = throwError "Could not find empty path"
-setPath path expr = do
-  env <- getEnv
-  mEnv <- findEnv path env
-  case mEnv of
-    Just (env, _, path) -> 
-      case path of 
-        [name] ->
-          let env' = setVariable name expr env
-          in undefined
-        _ -> throwError "obj setting not supported yet"
-    Nothing -> throwError "Could not find path"
+--setPath :: [ObjKey] -> Expr -> EvalMonad2 ()
+--setPath [] _ = throwError "Could not find empty path"
+--setPath path expr = do
+--  env <- getEnv
+--  mEnv <- findEnv path env
+--  case mEnv of
+--    Just (env, _, path) -> 
+--      case path of 
+--        [name] ->
+--          let env' = setVariable name expr env
+--          in undefined
+--        _ -> throwError "obj setting not supported yet"
+--    Nothing -> throwError "Could not find path"
 
   
 -- deprecated
