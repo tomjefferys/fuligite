@@ -3,17 +3,17 @@ module HogueScript.RunFile where
 import HogueScript.Functions (defaultEnv)
 import HogueScript.Object (mkObj)
 import HogueScript.ObjKey (ObjKey(..))
-import HogueScript.Expr (Expr(..), EvalState(..), Object,
-                          EvalMonad2, doEM)
-import HogueScript.Eval (makeEvalState, eval, declareVar)
+import HogueScript.Expr (Expr(..), Object,
+                          EvalMonad2, doEM, makeEvalState)
+import HogueScript.Eval (eval, declareVar, lookupPath)
 import HogueScript.Literal (toString)
 import HogueScript.FileLoader (loadFile)
-import qualified HogueScript.Zipper as Zipper
 
 import Control.Monad.State.Strict
 import Data.Maybe (fromMaybe)
 
 import qualified Data.Map.Strict as Map
+import HogueScript.Path (Path(..))
 
 runFile :: String -> IO ()
 runFile fileName = do
@@ -29,10 +29,11 @@ runObjectFile obj = do
                     Left err -> (show err, st)
                     Right (_, st'') -> ("OK", st'')
     print str
-    let mOut = getStdOut st'
+    let mOut = doEM st' getStdOut 
     case mOut of 
-        Just out -> putStrLn out
-        _ -> print ""
+        Right (Just out, _) -> putStrLn out
+        Right _ -> print "Could not get stdout"
+        Left err -> print (show err)
     
     
 runObject :: Object -> EvalMonad2 ()
@@ -47,9 +48,7 @@ runObject obj =
               (NullKey, _) -> error "Unexpected NullKey found")
   where
     bindExpr :: String -> Expr -> EvalMonad2 Expr
-    bindExpr key expr = do
-      env <- fmap getEnv get
-      declareVar (Zipper.fromList env) key expr
+    bindExpr = declareVar 
 
 
 runPropFile :: [(ObjKey, Expr)] -> IO ()
@@ -64,19 +63,18 @@ runPropFile props = do
       Just expr -> do
         let eResult = doEM (makeEvalState env mkObj) (eval expr)
         case eResult of
-          Left err -> print err
-          Right (_,st) -> 
-            print $ fromMaybe "" $ getStdOut st
+          Left err     -> print err
+          Right (_,st) -> do
+            let mOut = doEM st getStdOut
+            case mOut of
+              Right (out, _) -> print $ fromMaybe "" out
+              Left err       -> print $ show err
 
       Nothing -> print "No main"
 
-getStdOut :: EvalState -> Maybe String
-getStdOut st = do
-    let env = getEnv st
-    expr <- case env of
-               [] -> Nothing 
-               top:_ -> Map.lookup (StrKey "stdout") top
-    lit <- case expr of
-             Lit l -> Just l
-             _ -> Nothing
-    return $ toString lit
+getStdOut :: EvalMonad2 (Maybe String)
+getStdOut  = do
+    mExpr <- lookupPath (Item $ StrKey "stdout")
+    return $ case mExpr of
+             Just (Lit l) -> Just $ toString l
+             _     -> Nothing

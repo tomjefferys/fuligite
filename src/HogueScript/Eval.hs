@@ -3,12 +3,8 @@ module HogueScript.Eval where
 
 import HogueScript.Expr
 import HogueScript.Literal
-import HogueScript.ObjZipper
 import HogueScript.ObjKey
-import HogueScript.Zipper (Zipper)
-import qualified HogueScript.Zipper as Zipper
 import qualified Data.Map.Strict as Map
-import qualified Data.IntMap as IntMap
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import qualified HogueScript.Environment as Env
@@ -22,7 +18,7 @@ eval expr =
         (Get prop) -> do
             mExpr <- lookupPath $ Path.fromList $ fmap StrKey prop
             return $ case mExpr of
-                        Just expr -> expr
+                        Just expr' -> expr'
                         _ -> Null
         (Obj oid) -> do
           obj <- getObj (Obj oid)
@@ -102,7 +98,7 @@ findExpr (name:remainder) expr =
     Obj objId -> do
       obj <- getObj $ Obj objId
       case Map.lookup name obj of
-        Just expr -> findExpr remainder expr
+        Just expr' -> findExpr remainder expr'
         Nothing -> return Nothing
     _ -> return Nothing
 

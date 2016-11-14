@@ -4,11 +4,8 @@ module HogueScript.Expr where
 
 import HogueScript.Literal
 import HogueScript.ObjKey
-import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import Control.Monad.Identity
@@ -137,11 +134,11 @@ makeEvalState :: Object     -- ^ The environment
               -> Object     -- ^ The local object
               -> EvalState  -- ^ Returns a new EvalState
 makeEvalState env obj =
-  let (eid, envCache) = IdCache.addValue (Env Nothing env)
+  let (eid, envs) = IdCache.addValue (Env Nothing env)
                         $ IdCache.empty "EnvCache"
-      (oid, objCache) = IdCache.addValue obj
+      (oid, objs) = IdCache.addValue obj
                         $ IdCache.empty "ObjCache"
-  in EvalState envCache eid objCache (Just oid) Nothing
+  in EvalState envs eid objs (Just oid) Nothing
 
 type EnvId = Int
 

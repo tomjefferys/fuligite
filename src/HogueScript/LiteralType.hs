@@ -55,11 +55,12 @@ instance LiteralType String where
     fromExpr (Lit _) = throwError $ show $ BAD_TYPE STRING
     fromExpr expr = eval expr >>= fromExpr
 
-instance LiteralType Object where
-    getExpr = Obj
-    fromExpr (Obj o) = return o
-    fromExpr (Lit _) = throwError $ show $ BAD_TYPE OBJECT
-    fromExpr expr = eval expr >>= fromExpr
+-- FIXME does object need to be a literal type
+--instance LiteralType Object where
+--    getExpr = Obj
+--    fromExpr (Obj o) = return o
+--    fromExpr (Lit _) = throwError $ show $ BAD_TYPE OBJECT
+--    fromExpr expr = eval expr >>= fromExpr
 
 -- | Evaluates a property and returns it's value, using 
 -- the supplied getter

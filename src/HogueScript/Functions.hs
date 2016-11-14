@@ -2,29 +2,25 @@
 module HogueScript.Functions where
 
 import HogueScript.Expr (Expr(..), Object, BuiltIn(..), EvalMonad2, getEnv,
-                          PropError(..), EvalState, getObj, getIdentifier,
+                          PropError(..), getObj, getIdentifier,
                           parent, getEnvById, setEnvById, setVariable,
                           setObj, setVar, getEnvId)
 import HogueScript.ObjKey (ObjKey(..))
-import HogueScript.Eval (lookupPath, eval)
-import HogueScript.ObjZipper (ObjZipper, setZipperExpr, collapse)
-import qualified HogueScript.Zipper as Zipper
+import HogueScript.Eval (eval)
 import HogueScript.Literal (
                Literal(..), toString, getCommonType, getType, promoteLit)
 
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 import Control.Monad.Except
-import HogueScript.Path (Path)
 import qualified HogueScript.Path as Path
 import qualified HogueScript.Environment as Env
-import Data.Maybe
 
 defaultEnv :: Object
 defaultEnv = Map.fromList [
       (StrKey "stdout", Lit $ S ""),
       (StrKey "var", HFn $ BuiltIn "var" fnVar),
-      --(StrKey "set", HFn $ BuiltIn "set" fnSet),
+      (StrKey "set", HFn $ BuiltIn "set" fnSet),
       (StrKey "do", HFn $ BuiltIn "do" fnDo),
       (StrKey "fn", HFn $ BuiltIn "fn" fnFn),
       (StrKey "+", HFn $ BuiltIn "+" fnSum),
