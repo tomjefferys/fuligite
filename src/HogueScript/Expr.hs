@@ -11,6 +11,7 @@ import Control.Monad.Except
 import Control.Monad.Identity
 import Util.IdCache (IdCache)
 import qualified Util.IdCache as IdCache 
+import Debug.Trace
 
 -- The map of properties for an entity
 -- TODO if this was just an array of values, with optional 
@@ -39,9 +40,11 @@ data Expr = Lit Literal |
 -- Gets an object from the state
 getObj :: Expr -> EvalMonad2 Object 
 getObj expr = do
-    oid <- case expr of
+    oid <- case traceStack "foo" expr of
             Obj oid -> return oid
-            _ -> throwError $ show $ BAD_TYPE OBJECT
+            -- FIXME handle getting a function def
+            ObjDef def -> throwError "It's a def"
+            _ -> throwError $ "boo" ++ (show $ BAD_TYPE OBJECT)
     cache <- objCache <$> get
     let mObj = IdCache.lookup oid cache
     case mObj of 

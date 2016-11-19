@@ -15,6 +15,7 @@ import Control.Monad.State.Strict
 import Control.Monad.Except
 import qualified HogueScript.Path as Path
 import qualified HogueScript.Environment as Env
+import Debug.Trace
 
 defaultEnv :: Object
 defaultEnv = Map.fromList [
@@ -32,10 +33,6 @@ defaultEnv = Map.fromList [
 fnVar :: [Expr] -> EvalMonad2 Expr
 fnVar [name,value] = do
     value' <- eval value
-    --let setVar =
-    --      case name of
-    --        (Get [identifier]) -> Map.insert (StrKey identifier) value'
-    --        _ -> id
     ident <-
           case name of
             (Get [i]) -> return i
@@ -47,7 +44,7 @@ fnVar [name,value] = do
             _ -> throwError "Can't get environment"
     env <- getEnvById eid
 
-    let env' = setVariable (StrKey ident) value env
+    let env' = setVariable (StrKey ident) value' env
     setEnvById eid env'
 
     return value'
@@ -107,7 +104,11 @@ fnSet _ = error "Illegal argument passed to set"
 -- function definition
 fnFn :: [Expr] -> EvalMonad2 Expr
 fnFn [params, def] = do
-    obj <- getObj params
+    obj <- case params of
+              Obj oid -> getObj $ Obj oid
+              ObjDef o -> return o
+              _ -> throwError "Function params is bad type"
+
     let elems = Map.elems obj
     ids <-  mapM getIdentifier elems
     let ids' = map (foldr1 (++)) ids
@@ -128,6 +129,7 @@ bindVariables params expr =
       obj' <- mapM (bindVariables params) obj
       objId <- setObj obj'
       return $ Obj objId
+    e -> return e
      -- Obj <$>     _ -> return expr
       
 
