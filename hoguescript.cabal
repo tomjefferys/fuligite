@@ -60,7 +60,7 @@ library
   -- other-extensions:    
   
   -- Other library packages from which modules are imported.
-  build-depends:       base, parsec, mtl, containers, HUnit
+  build-depends:       base, parsec, mtl, containers, HUnit, extra
   
   -- Directories containing source files.
   hs-source-dirs:   src  
@@ -73,4 +73,4 @@ executable hoguescript
   main-Is:          Main.hs
   ghc-options:      -Wall -optc-ffast-math
   -- other-modules:        
-  build-depends:       base, parsec, mtl, containers, HUnit
+  build-depends:       base, parsec, mtl, containers, HUnit, extra

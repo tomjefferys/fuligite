@@ -13,6 +13,7 @@ import HogueScript.Literal (
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 import Control.Monad.Except
+import Control.Monad.Extra (whenJust)
 import qualified HogueScript.Path as Path
 import qualified HogueScript.Environment as Env
 import Debug.Trace
@@ -48,22 +49,6 @@ fnVar [name,value] = do
     setEnvById eid env'
 
     return value'
-
-          
-    
-    
-
-    --st <- get
-    ---- shift the zipper right as we need to set the variable in the
-    ---- super environment
-    --let envZip = Zipper.right $ Zipper.fromList $ getEnv st
-    --let envs = maybe
-    --             (getEnv st)
-    --             (Zipper.toList . Zipper.set envZip . setVar)
-    --             (Zipper.get envZip)
-    --put $ st { getEnv = envs }
-    --return value'
-
 fnVar _ = error "Illegal argument passed to var"
 
 -- function to set a variable
@@ -72,33 +57,14 @@ fnVar _ = error "Illegal argument passed to var"
 -- Should probably just return a new object
 fnSet :: [Expr] -> EvalMonad2 Expr
 fnSet [name, value] = do
-    st <- get
+    value' <- eval value
     path <- case name of
                 (Get path) -> return $ Path.fromList $ StrKey <$> path
                 _ -> throwError "Not a path"
-    mVar <- Env.lookupVar path $ getEnvId st
-    case mVar of
-      Just var -> setVar var value
-      Nothing -> return ()
-    return value
-
---    fromMaybe () (setVar path) mVar
-
-    
-    
---    zipper <- case name of
---                (Get path) -> lookupPath $ fmap StrKey path
---                _ -> throwError "Not a path"
---    put $ either (const st) (doSet st value) zipper
---    return value
---  where
---    doSet :: EvalState -> Expr -> ObjZipper -> EvalState
---    doSet st val zipper = 
---      let zipper' = setZipperExpr zipper val
---          (setter, expr) = collapse zipper'
---      in case expr of
---           (Obj obj) -> setter obj st 
---           _ -> error "collapse should return an object"
+    eid <- getEnvId <$> get
+    mVar <- Env.lookupVar path eid
+    whenJust mVar (`setVar` value')
+    return value'
 fnSet _ = error "Illegal argument passed to set"
 
 -- function definition
