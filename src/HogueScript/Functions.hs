@@ -2,9 +2,9 @@
 module HogueScript.Functions where
 
 import HogueScript.Expr (Expr(..), Object, BuiltIn(..), EvalMonad2, getEnv,
-                          PropError(..), getObj, getIdentifier,
-                          parent, getEnvById, setEnvById, setVariable,
-                          setObj, setVar, getEnvId)
+                          parent, PropError(..), getIdentifier,
+                          getEnvById, setEnvById, setVariable,
+                          setVar, getEnvId)
 import HogueScript.ObjKey (ObjKey(..))
 import HogueScript.Eval (eval)
 import HogueScript.Literal (
@@ -16,7 +16,7 @@ import Control.Monad.Except
 import Control.Monad.Extra (whenJust)
 import qualified HogueScript.Path as Path
 import qualified HogueScript.Environment as Env
-import Debug.Trace
+import qualified HogueScript.Object as Obj
 
 defaultEnv :: Object
 defaultEnv = Map.fromList [
@@ -71,7 +71,7 @@ fnSet _ = error "Illegal argument passed to set"
 fnFn :: [Expr] -> EvalMonad2 Expr
 fnFn [params, def] = do
     obj <- case params of
-              Obj oid -> getObj $ Obj oid
+              Obj oid -> Obj.getObj oid
               ObjDef o -> return o
               _ -> throwError "Function params is bad type"
 
@@ -90,10 +90,10 @@ bindVariables params expr =
                   else eval g
     (Fapp path exprs) -> 
       Fapp path <$> mapM (bindVariables params) exprs
-    o@(Obj _) -> do
-      obj <- getObj o     
+    (Obj oid) -> do
+      obj <- Obj.getObj oid     
       obj' <- mapM (bindVariables params) obj
-      objId <- setObj obj'
+      objId <- Obj.setObj obj'
       return $ Obj objId
     e -> return e
      -- Obj <$>     _ -> return expr

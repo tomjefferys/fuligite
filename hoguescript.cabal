@@ -52,7 +52,7 @@ library
                     HogueScript.Literal, HogueScript.LiteralType, HogueScript.Expr,
                     HogueScript.Eval, HogueScript.RunFile, HogueScript.FileLoader
   
-  ghc-options:      -Wall -optc-ffast-math
+  ghc-options:      -Wall -fwarn-incomplete-uni-patterns -optc-ffast-math
   -- Modules included in this library but not exported.
   -- other-modules:       
   

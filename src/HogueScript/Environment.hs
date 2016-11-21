@@ -78,6 +78,7 @@ pushEnv = do
   put st { getEnvId = eid, envCache = cache }
   return eid
 
+-- | Pops the current environment from the stack
 popEnv :: EvalMonad2 ()
 popEnv = do
   st <- get

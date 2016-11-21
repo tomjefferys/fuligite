@@ -10,6 +10,7 @@ import Control.Monad.Except
 import qualified HogueScript.Environment as Env
 import HogueScript.Path (Path)
 import qualified HogueScript.Path as Path
+import qualified HogueScript.Object as Obj
 
 -- | Evaluate an expression
 eval :: Expr -> EvalMonad2 Expr
@@ -21,10 +22,10 @@ eval expr =
                         Just expr' -> expr'
                         _ -> Null
         (Obj oid) -> do
-          obj <- getObj (Obj oid)
+          obj <- Obj.getObj oid
           pushObj oid
-          obj' <-  mapM eval obj
-          oid' <- setObj obj'
+          obj' <- mapM eval obj
+          oid' <- Obj.setObj obj'
           popObj
           return $ Obj oid'
         (Fapp path args) -> doFunc path args
@@ -96,7 +97,7 @@ findExpr [] expr = return $ Just expr
 findExpr (name:remainder) expr =
   case expr of
     Obj objId -> do
-      obj <- getObj $ Obj objId
+      obj <- Obj.getObj objId
       case Map.lookup name obj of
         Just expr' -> findExpr remainder expr'
         Nothing -> return Nothing
@@ -118,44 +119,44 @@ findExpr (name:remainder) expr =
 
   
 -- deprecated
-lookupEnvs :: Env -> [ObjKey] -> EvalMonad2 (Maybe Expr)
-lookupEnvs env path = do
-  mResult <- lookupEnvPath env path
-  case mResult of
-    Just expr -> return $ Just expr
-    Nothing -> 
-      case parent env of
-        Just eid -> do
-          parentEnv <- getEnvById eid
-          lookupEnvs parentEnv path
-        Nothing -> return Nothing
-  
-lookupEnvPath :: Env -> [ObjKey] -> EvalMonad2 (Maybe Expr)
-lookupEnvPath _ [] = return Nothing
-lookupEnvPath env [key] = do
-    let stateObj = getState env
-    return $ Map.lookup key stateObj
-lookupEnvPath env (key:path) = do
-    let stateObj = getState env
-    let mExpr = Map.lookup key stateObj
-    case mExpr of
-      Just (Obj oid) -> lookupObjPath path oid
-      _ -> return Nothing
+--lookupEnvs :: Env -> [ObjKey] -> EvalMonad2 (Maybe Expr)
+--lookupEnvs env path = do
+--  mResult <- lookupEnvPath env path
+--  case mResult of
+--    Just expr -> return $ Just expr
+--    Nothing -> 
+--      case parent env of
+--        Just eid -> do
+--          parentEnv <- getEnvById eid
+--          lookupEnvs parentEnv path
+--        Nothing -> return Nothing
+--  
+--lookupEnvPath :: Env -> [ObjKey] -> EvalMonad2 (Maybe Expr)
+--lookupEnvPath _ [] = return Nothing
+--lookupEnvPath env [key] = do
+--    let stateObj = getState env
+--    return $ Map.lookup key stateObj
+--lookupEnvPath env (key:path) = do
+--    let stateObj = getState env
+--    let mExpr = Map.lookup key stateObj
+--    case mExpr of
+--      Just (Obj oid) -> lookupObjPath path oid
+--      _ -> return Nothing
   
 
 -- | Lookups up a path on the specified object
-lookupObjPath :: [ObjKey] -> ObjId -> EvalMonad2 (Maybe Expr)
-lookupObjPath [] _ = return Nothing
-lookupObjPath [key] oid = do
-  obj <- getObj $ Obj oid
-  return $ Map.lookup key obj
-lookupObjPath (key:path) oid = do
-  obj <- getObj $ Obj oid
-  let expr = Map.lookup key obj
-  case expr of
-    Just (Obj objId) -> lookupObjPath path objId
-      --getObj (Obj objId) >>= lookupObjPath path
-    _ -> return Nothing
+--lookupObjPath :: [ObjKey] -> ObjId -> EvalMonad2 (Maybe Expr)
+--lookupObjPath [] _ = return Nothing
+--lookupObjPath [key] oid = do
+--  obj <- getObj $ Obj oid
+--  return $ Map.lookup key obj
+--lookupObjPath (key:path) oid = do
+--  obj <- getObj $ Obj oid
+--  let expr = Map.lookup key obj
+--  case expr of
+--    Just (Obj objId) -> lookupObjPath path objId
+--      --getObj (Obj objId) >>= lookupObjPath path
+--    _ -> return Nothing
       
       
 
@@ -252,7 +253,7 @@ getPropFromObj :: [ObjKey]
                   -> Expr
                   -> EvalMonad2 Expr
 getPropFromObj (prop:subprops) (Obj oid) = do
-    obj <- getObj (Obj oid)
+    obj <- Obj.getObj oid
     let mVal = Map.lookup prop obj
     val <- case mVal of
             Just val -> return val

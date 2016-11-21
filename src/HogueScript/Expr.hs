@@ -11,7 +11,8 @@ import Control.Monad.Except
 import Control.Monad.Identity
 import Util.IdCache (IdCache)
 import qualified Util.IdCache as IdCache 
-import Debug.Trace
+import HogueScript.Path (Path)
+import qualified HogueScript.Path as Path
 
 -- The map of properties for an entity
 -- TODO if this was just an array of values, with optional 
@@ -28,7 +29,7 @@ type ObjId = Int
 
 -- Represents components of an expression
 data Expr = Lit Literal |
-            ObjDef Object |
+            ObjDef Object | -- FIXME get rid of this?
             Obj ObjId |
             Get [String] |
             Fapp [String] [Expr] | -- ^ Function application
@@ -36,29 +37,6 @@ data Expr = Lit Literal |
             HFn BuiltIn | -- ^ A builtin function
             Null 
             deriving (Ord, Eq, Show)
-
--- Gets an object from the state
-getObj :: Expr -> EvalMonad2 Object 
-getObj expr = do
-    oid <- case traceStack "foo" expr of
-            Obj oid -> return oid
-            -- FIXME handle getting a function def
-            ObjDef def -> throwError "It's a def"
-            _ -> throwError $ "boo" ++ (show $ BAD_TYPE OBJECT)
-    cache <- objCache <$> get
-    let mObj = IdCache.lookup oid cache
-    case mObj of 
-      Just obj -> return obj
-      Nothing  -> throwError "not an object"
-
-setObj :: Object -> EvalMonad2 ObjId
-setObj obj = do
-  st <- get
-  let cache = objCache st
-  let (oid, cache') = IdCache.addValue obj cache
-  put st { objCache = cache' }
-  return oid
-
 
 getIdentifier :: (MonadError String m)
                   => Expr
@@ -85,7 +63,11 @@ instance Show BuiltIn where
 
 -- | Variable type, consists of variables owner,
 -- and name
-data Variable = EnvVar EnvId ObjKey | ObjVar ObjId ObjKey
+data Variable = EnvVar EnvId ObjKey
+                | ObjVar ObjId ObjKey
+                | ProtoVar Variable ObjId Path
+
+
 
 getVar :: Variable -> EvalMonad2 (Maybe Expr)
 getVar (EnvVar eid key) = do
@@ -94,6 +76,7 @@ getVar (EnvVar eid key) = do
 getVar (ObjVar oid key) = do
   cache <- objCache <$> get
   return $ Map.lookup key $ IdCache.getValue oid cache
+getVar (ProtoVar proto _ _) = getVar proto
 
 setVar :: Variable -> Expr -> EvalMonad2 ()
 setVar (EnvVar eid key) expr = do
@@ -113,9 +96,34 @@ setVar (ObjVar oid key) expr = do
   let cache' = IdCache.updateValue oid obj' cache
   put st { objCache = cache' } 
 
-      
-    
-  
+setVar (ProtoVar _ oid path) expr = 
+  setVarWithPath oid path expr
+
+setVarWithPath :: ObjId -> Path -> Expr -> EvalMonad2 ()
+setVarWithPath oid path expr = do
+  st <- get
+  let cache = objCache st
+  let obj = IdCache.getValue oid cache
+  let (field, mPath) = Path.uncons path
+  let mValue = Map.lookup field obj
+  case (mValue, mPath) of
+    -- No path remaining, set the field on this object:
+    (_, Nothing) -> 
+        let obj' = Map.insert field expr obj
+            cache' = IdCache.updateValue oid obj' cache
+        in put st { objCache = cache' }
+    -- Path remaining field exists and is object:
+    (Just (Obj oid'), Just path') -> setVarWithPath oid' path' expr
+    -- Path remaining and field is blank:
+    (Nothing, Just path') -> do
+        let (oid', cache') = IdCache.addValue Map.empty cache
+        let obj' = Map.insert field (Obj oid') obj
+        let cache'' = IdCache.updateValue oid obj' cache'
+        put st { objCache = cache'' }
+        setVarWithPath oid' path' expr
+    -- field is not an object
+    (_, _) -> throwError "Field is not an object"
+
 
 -- The state of evaluation of a property expression
 data EvalState =
