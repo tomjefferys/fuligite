@@ -11,6 +11,8 @@ import qualified HogueScript.Environment as Env
 import HogueScript.Path (Path)
 import qualified HogueScript.Path as Path
 import qualified HogueScript.Object as Obj
+import Debug.Trace
+import qualified Data.List.NonEmpty as NonEmpty
 
 -- | Evaluate an expression
 eval :: Expr -> EvalMonad2 Expr
@@ -40,19 +42,29 @@ doFunc path args = do
     -- lookup name, first in obj, then env
     fun <- lookupPath $ Path.fromList $ fmap StrKey path
     let fn = case fun of
-                Just (HFn (BuiltIn _ fn')) -> fn'
-                Just (Fn params def) -> userFunc params def
+                Just (HFn (BuiltIn _ fn')) -> builtInFunc fn'
+                Just (Fn eid params def) -> userFunc eid params def
                 _ -> error ("unknown function" ++ show path)
-    pushEnv *> fn args <* popEnv
+    fn args
+    --pushEnv *> fn args <* popEnv
+
+builtInFunc :: ([Expr] -> EvalMonad2 Expr)
+            -> ([Expr] -> EvalMonad2 Expr)
+builtInFunc fn =
+  (\args -> Env.pushEnv *> fn args <* Env.popEnv)
 
 -- | Execute a user defined function
-userFunc :: [String] -> Expr -> [Expr] -> EvalMonad2 Expr
-userFunc params expr args = do
+userFunc :: EnvId -> [String] -> Expr -> [Expr] -> EvalMonad2 Expr
+userFunc eid params expr args = do
     -- bind and evaluate arguments 
     evalArgs <- mapM eval args
     let zipped = zip params evalArgs
-    mapM_ dv zipped
-    eval expr 
+    --mapM_ dv zipped
+    Env.pushEnvStack eid
+         *> Env.pushEnv
+           *> mapM_ dv zipped
+              *> eval expr <* Env.popEnv
+                             <* Env.popEnvStack
 
   where
     dv :: (String,Expr) -> EvalMonad2 Expr 
@@ -77,7 +89,7 @@ declareVar name value = do
 lookupPath :: Path -> EvalMonad2 (Maybe Expr)
 lookupPath path = do
   eid <- getEnvId <$> get
-  mVar <- Env.lookupVar path eid
+  mVar <- Env.lookupVar path $ NonEmpty.head eid
   case mVar of
     Just var -> getVar var
     Nothing -> return Nothing
@@ -85,7 +97,7 @@ lookupPath path = do
 setPath :: Path -> Expr -> EvalMonad2 ()
 setPath path expr = do
   eid <- getEnvId <$> get
-  mVar <- Env.lookupVar path eid
+  mVar <- Env.lookupVar path $ NonEmpty.head eid
   case mVar of
     Just var -> setVar var expr
     Nothing -> return ()

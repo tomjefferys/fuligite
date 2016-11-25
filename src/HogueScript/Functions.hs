@@ -17,6 +17,8 @@ import Control.Monad.Extra (whenJust)
 import qualified HogueScript.Path as Path
 import qualified HogueScript.Environment as Env
 import qualified HogueScript.Object as Obj
+import qualified Data.List.NonEmpty as NonEmpty
+import Debug.Trace
 
 defaultEnv :: Object
 defaultEnv = Map.fromList [
@@ -60,9 +62,9 @@ fnSet [name, value] = do
     value' <- eval value
     path <- case name of
                 (Get path) -> return $ Path.fromList $ StrKey <$> path
-                _ -> throwError "Not a path"
+                _ -> throwError $ show name ++ " is not a path"
     eid <- getEnvId <$> get
-    mVar <- Env.lookupVar path eid
+    mVar <- Env.lookupVar path $ NonEmpty.head eid
     whenJust mVar (`setVar` value')
     return value'
 fnSet _ = error "Illegal argument passed to set"
@@ -78,10 +80,13 @@ fnFn [params, def] = do
     let elems = Map.elems obj
     ids <-  mapM getIdentifier elems
     let ids' = map (foldr1 (++)) ids
-    def' <- bindVariables elems def
-    return $ Fn ids' def'
+    --def' <- bindVariables elems def
+    env <- NonEmpty.head . getEnvId <$> get
+    --return $ Fn env ids' def'
+    return $ Fn env ids' def
 fnFn args = throwError $ show $ BAD_ARGS args
 
+-- FIXME we shouldn't be doing this
 bindVariables :: [Expr] -> Expr -> EvalMonad2 Expr
 bindVariables params expr =
   case expr of
@@ -133,9 +138,10 @@ fnDo _ = error "Illegal argument passed to do"
 -- Sum function, adds up arguments
 {-# ANN fnSum "HLint: ignore Use sum" #-}
 fnSum :: [Expr] -> EvalMonad2 Expr
+fnSum exprs | trace (show exprs) False = undefined
 fnSum exprs = do
     literals <- mapM eval exprs
-    summables <- promoteToSummables literals
+    summables <- trace (show literals) $ promoteToSummables literals
     return $ Lit $ foldr1 add summables
   where
     add :: Literal -> Literal -> Literal

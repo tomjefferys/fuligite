@@ -1,3 +1,24 @@
 (var a 1)
 (var add (fn {n} (+ a n)))
 (print (add 2))
+
+(var addA (fn {n} (set a (+ a n))))
+
+(print a)
+(addA 5)
+(print a)
+
+(print "foo")
+(var mkAccount
+  (fn {n} 
+    (do
+      (var ammount 0)
+      (fn {n} (set ammount (+ ammount n))))))
+
+(print "bar")
+
+(var account (mkAccount))
+
+(print (account 5))
+(print (account 3))
+(print (account 2))

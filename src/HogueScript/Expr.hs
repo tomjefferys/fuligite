@@ -13,6 +13,8 @@ import Util.IdCache (IdCache)
 import qualified Util.IdCache as IdCache 
 import HogueScript.Path (Path)
 import qualified HogueScript.Path as Path
+import Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NonEmpty
 
 -- The map of properties for an entity
 -- TODO if this was just an array of values, with optional 
@@ -33,7 +35,7 @@ data Expr = Lit Literal |
             Obj ObjId |
             Get [String] |
             Fapp [String] [Expr] | -- ^ Function application
-            Fn [String] Expr |   -- ^ Function
+            Fn EnvId [String] Expr |   -- ^ Function
             HFn BuiltIn | -- ^ A builtin function
             Null 
             deriving (Ord, Eq, Show)
@@ -129,7 +131,7 @@ setVarWithPath oid path expr = do
 data EvalState =
     EvalState {
         envCache  :: IdCache Env,
-        getEnvId  :: EnvId,
+        getEnvId  :: NonEmpty EnvId,
         objCache  :: IdCache Object,
         getObject :: Maybe ObjId,
         failure   :: Maybe String }
@@ -138,7 +140,11 @@ emptyEvalState :: EvalState
 emptyEvalState = 
   let (eid, cache) = IdCache.addValue (emptyEnv Nothing)
                      $ IdCache.empty "EnvCache"
-  in EvalState cache eid (IdCache.empty "ObjCache") Nothing Nothing
+  in EvalState
+      cache
+      (NonEmpty.fromList [eid])
+      (IdCache.empty "ObjCache")
+      Nothing Nothing
   
 -- | Constructs an evaluation state
 makeEvalState :: Object     -- ^ The environment
@@ -149,7 +155,12 @@ makeEvalState env obj =
                         $ IdCache.empty "EnvCache"
       (oid, objs) = IdCache.addValue obj
                         $ IdCache.empty "ObjCache"
-  in EvalState envs eid objs (Just oid) Nothing
+  in EvalState
+        envs
+        (NonEmpty.fromList [eid])
+        objs
+        (Just oid)
+        Nothing
 
 type EnvId = Int
 
@@ -201,31 +212,15 @@ getEnv :: EvalMonad2 Env
 getEnv = do
   eid <- getEnvId <$> get
   cache <- envCache <$> get
-  return $ IdCache.getValue eid cache
+  return $ IdCache.getValue (NonEmpty.head eid) cache
 
 setEnv :: Env -> EvalMonad2 ()
 setEnv env = do
   st <- get
-  let eid = getEnvId st
-  let cache = envCache st
-  let cache' = IdCache.updateValue eid env cache
+  let eid    = getEnvId st
+  let cache  = envCache st
+  let cache' = IdCache.updateValue (NonEmpty.head eid) env cache
   put $ st { envCache = cache' }
-
--- | push a new environment 
-pushEnv :: EvalMonad2 ()
-pushEnv = do
-    st <- get
-    let (eid', envs') = IdCache.addValue
-         (emptyEnv $ Just $ getEnvId st)
-         $ envCache st
-    put st { getEnvId = eid', envCache = envs'}
-
--- pop and discard the top environment
-popEnv :: EvalMonad2 ()
-popEnv = do
-    st <- get
-    let env = IdCache.getValue (getEnvId st) (envCache st)
-    put $ maybe st (\p -> st { getEnvId = p }) $ parent env
 
 pushObj :: (MonadState EvalState m) => ObjId -> m ()
 pushObj oid = do

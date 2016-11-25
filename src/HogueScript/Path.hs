@@ -3,6 +3,7 @@ module HogueScript.Path where
 import HogueScript.ObjKey
 
 data Path = Item ObjKey | Path ObjKey Path
+  deriving (Show)
 
 -- | Converts a list of ObjKeys into a Path
 -- errors if given an empty list

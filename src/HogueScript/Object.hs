@@ -11,6 +11,7 @@ import qualified Util.IdCache as IdCache
 import qualified HogueScript.Path as Path
 import Control.Monad.State.Strict
 import Control.Monad.Except
+import Debug.Trace
 
 class ObjKeySrc a where
     getKey :: a -> ObjKey
@@ -54,6 +55,8 @@ setObj obj = do
 
 -- | Lookup a variable in an object
 lookupVar :: Path -> ObjId -> EvalMonad2 (Maybe Variable)
+lookupVar path oid
+  | trace (show path ++ " " ++ show oid) False = undefined
 lookupVar path oid = do
   let (key, mPath) = Path.uncons path 
   obj <- getObj oid
