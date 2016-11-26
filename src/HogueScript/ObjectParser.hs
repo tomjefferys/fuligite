@@ -106,7 +106,7 @@ nullprop :: Parser (ObjKey, Expr)
 nullprop = try $ (,) NullKey <$> expression
 
 objectbody :: Parser [(ObjKey, Expr)]
-objectbody = many1 (choice [propmap, propnum, nullprop] <* spaces)
+objectbody = many (choice [propmap, propnum, nullprop] <* spaces)
 
 object :: Parser Expr
 object = try $ mkObj <$> (char '{' *> spaces *> objectbody <* char '}')

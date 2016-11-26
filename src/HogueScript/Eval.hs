@@ -11,7 +11,6 @@ import qualified HogueScript.Environment as Env
 import HogueScript.Path (Path)
 import qualified HogueScript.Path as Path
 import qualified HogueScript.Object as Obj
-import Debug.Trace
 import qualified Data.List.NonEmpty as NonEmpty
 
 -- | Evaluate an expression
@@ -23,6 +22,11 @@ eval expr =
             return $ case mExpr of
                         Just expr' -> expr'
                         _ -> Null
+        -- If we encounter an object definition, turn it into a reference
+        (ObjDef obj) -> do
+          oid <- Obj.setObj obj
+          eval (Obj oid)
+          
         (Obj oid) -> do
           obj <- Obj.getObj oid
           pushObj oid

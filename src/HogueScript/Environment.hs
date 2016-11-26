@@ -39,11 +39,11 @@ lookupVar path eid = do
   env <- getEnv eid
   let mValue = Map.lookup key $ getState env
   case (mValue, mPath) of
-    (Just _,  Nothing)   -> return $ Just $ EnvVar eid key
-    (Just (Obj oid), Just path') -> Object.lookupVar path' oid
-    _         -> maybe (return Nothing)
-                                (lookupVar path)
-                                (parent env)
+      (Just _,  Nothing)   -> return $ Just $ EnvVar eid key
+      (Just (Obj oid), Just path') -> Object.lookupVar path' oid
+      _         -> maybe (return Nothing)
+                                  (lookupVar path)
+                                  (parent env)
 
 getEnv :: EnvId -> EvalMonad2 Env
 getEnv eid = IdCache.getValue eid . envCache <$> get
