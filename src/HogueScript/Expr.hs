@@ -71,35 +71,36 @@ data Variable = EnvVar EnvId ObjKey
 
 
 
-getVar :: Variable -> EvalMonad2 (Maybe Expr)
-getVar (EnvVar eid key) = do
-  cache <- envCache <$> get
-  return $ Map.lookup key $ getState $ IdCache.getValue eid cache
-getVar (ObjVar oid key) = do
-  cache <- objCache <$> get
-  return $ Map.lookup key $ IdCache.getValue oid cache
-getVar (ProtoVar proto _ _) = getVar proto
-
-setVar :: Variable -> Expr -> EvalMonad2 ()
-setVar (EnvVar eid key) expr = do
-  st <- get
-  let cache     = envCache st
-  let env       = IdCache.getValue eid $ envCache st
-  let envState' = Map.insert key expr $ getState env
-  let env'      = env { getState                     = envState' }
-  let cache'    = IdCache.updateValue eid env' cache
-  put st { envCache = cache' }
-
-setVar (ObjVar oid key) expr = do
-  st <- get
-  let cache  = objCache st
-  let obj    = IdCache.getValue oid cache
-  let obj'   = Map.insert key expr obj
-  let cache' = IdCache.updateValue oid obj' cache
-  put st { objCache = cache' } 
-
-setVar (ProtoVar _ oid path) expr = 
-  setVarWithPath oid path expr
+-- TODO create Variable module
+--getVar :: Variable -> EvalMonad2 (Maybe Expr)
+--getVar (EnvVar eid key) = do
+--  cache <- envCache <$> get
+--  return $ Map.lookup key $ getState $ IdCache.getValue eid cache
+--getVar (ObjVar oid key) = do
+--  cache <- objCache <$> get
+--  return $ Map.lookup key $ IdCache.getValue oid cache
+--getVar (ProtoVar proto _ _) = getVar proto
+--
+--setVar :: Variable -> Expr -> EvalMonad2 ()
+--setVar (EnvVar eid key) expr = do
+--  st <- get
+--  let cache     = envCache st
+--  let env       = IdCache.getValue eid $ envCache st
+--  let envState' = Map.insert key expr $ getState env
+--  let env'      = env { getState                     = envState' }
+--  let cache'    = IdCache.updateValue eid env' cache
+--  put st { envCache = cache' }
+--
+--setVar (ObjVar oid key) expr = do
+--  st <- get
+--  let cache  = objCache st
+--  let obj    = IdCache.getValue oid cache
+--  let obj'   = Map.insert key expr obj
+--  let cache' = IdCache.updateValue oid obj' cache
+--  put st { objCache = cache' } 
+--
+--setVar (ProtoVar _ oid path) expr = 
+--  setVarWithPath oid path expr
 
 setVarWithPath :: ObjId -> Path -> Expr -> EvalMonad2 ()
 setVarWithPath oid path expr = do

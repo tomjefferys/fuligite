@@ -9,9 +9,8 @@ import HogueScript.Expr
 import HogueScript.Path (Path(..))
 import qualified Util.IdCache as IdCache
 import qualified HogueScript.Path as Path
-import Control.Monad.State.Strict
+import qualified Control.Monad.State.Strict as State
 import Control.Monad.Except
-import Debug.Trace
 
 class ObjKeySrc a where
     getKey :: a -> ObjKey
@@ -38,28 +37,33 @@ mkObj = Map.empty
 --obj % property = setProp property obj
 
 -- Gets an object from the state
-getObj :: ObjId -> EvalMonad2 Object 
-getObj oid = do
-    cache <- objCache <$> get
+get :: ObjId -> EvalMonad2 Object 
+get oid = do
+    cache <- objCache <$> State.get
     case IdCache.lookup oid cache of 
       Just obj -> return obj
       Nothing  -> throwError "not an object"
 
-setObj :: Object -> EvalMonad2 ObjId
-setObj obj = do
-  st <- get
+update :: ObjId -> Object -> EvalMonad2 ()
+update oid obj = do
+  st <- State.get
+  let cache  = objCache st
+  let cache' = IdCache.updateValue oid obj cache
+  State.put st { objCache = cache' }
+
+set :: Object -> EvalMonad2 ObjId
+set obj = do
+  st <- State.get
   let cache = objCache st
   let (oid, cache') = IdCache.addValue obj cache
-  put st { objCache = cache' }
+  State.put st { objCache = cache' }
   return oid
 
 -- | Lookup a variable in an object
 lookupVar :: Path -> ObjId -> EvalMonad2 (Maybe Variable)
-lookupVar path oid
-  | trace (show path ++ " " ++ show oid) False = undefined
 lookupVar path oid = do
   let (key, mPath) = Path.uncons path 
-  obj <- getObj oid
+  obj <- get oid
   let mValue = Map.lookup key obj
   mValue' <-
       case (mValue, mPath) of
@@ -75,7 +79,7 @@ lookupVar path oid = do
 -- | Lookup a variable in an objects prototype
 lookupProtoVar :: Path -> ObjId -> EvalMonad2 (Maybe Variable)
 lookupProtoVar path oid = do
-  obj <- getObj oid
+  obj <- get oid
   let mPrototype = Map.lookup (StrKey "__proto") obj
   case mPrototype of
     Nothing -> return Nothing

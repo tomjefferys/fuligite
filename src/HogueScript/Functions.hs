@@ -4,7 +4,7 @@ module HogueScript.Functions where
 import HogueScript.Expr (Expr(..), Object, BuiltIn(..), EvalMonad2, getEnv,
                           parent, PropError(..), getIdentifier,
                           getEnvById, setEnvById, setVariable,
-                          setVar, getEnvId)
+                          getEnvId)
 import HogueScript.ObjKey (ObjKey(..))
 import HogueScript.Eval (eval)
 import HogueScript.Literal (
@@ -17,8 +17,8 @@ import Control.Monad.Extra (whenJust)
 import qualified HogueScript.Path as Path
 import qualified HogueScript.Environment as Env
 import qualified HogueScript.Object as Obj
+import qualified HogueScript.Variable as Var
 import qualified Data.List.NonEmpty as NonEmpty
-import Debug.Trace
 
 defaultEnv :: Object
 defaultEnv = Map.fromList [
@@ -65,7 +65,7 @@ fnSet [name, value] = do
                 _ -> throwError $ show name ++ " is not a path"
     eid <- getEnvId <$> get
     mVar <- Env.lookupVar path $ NonEmpty.head eid
-    whenJust mVar (`setVar` value')
+    whenJust mVar (`Var.set` value')
     return value'
 fnSet _ = error "Illegal argument passed to set"
 
@@ -73,7 +73,7 @@ fnSet _ = error "Illegal argument passed to set"
 fnFn :: [Expr] -> EvalMonad2 Expr
 fnFn [params, def] = do
     obj <- case params of
-              Obj oid -> Obj.getObj oid
+              Obj oid -> Obj.get oid
               ObjDef o -> return o
               _ -> throwError "Function params is bad type"
 
@@ -96,9 +96,9 @@ bindVariables params expr =
     (Fapp path exprs) -> 
       Fapp path <$> mapM (bindVariables params) exprs
     (Obj oid) -> do
-      obj <- Obj.getObj oid     
+      obj <- Obj.get oid     
       obj' <- mapM (bindVariables params) obj
-      objId <- Obj.setObj obj'
+      objId <- Obj.set obj'
       return $ Obj objId
     e -> return e
      -- Obj <$>     _ -> return expr
@@ -138,15 +138,14 @@ fnDo _ = error "Illegal argument passed to do"
 -- Sum function, adds up arguments
 {-# ANN fnSum "HLint: ignore Use sum" #-}
 fnSum :: [Expr] -> EvalMonad2 Expr
-fnSum exprs | trace (show exprs) False = undefined
 fnSum exprs = do
     literals <- mapM eval exprs
-    summables <- trace (show literals) $ promoteToSummables literals
+    summables <- promoteToSummables literals
     return $ Lit $ foldr1 add summables
   where
     add :: Literal -> Literal -> Literal
     add (B b1) (B b2) = B $ b1 || b2
-    add (C _) (C _) = error "Can't add chars"
+    add (C _) (C _)   = error "Can't add chars"
     add (I i1) (I i2) = I $ i1 + i2
     add (F f1) (F f2) = F $ f1 + f2
     add (S s1) (S s2) = S $ s1 ++ s2

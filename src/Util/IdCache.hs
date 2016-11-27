@@ -38,6 +38,7 @@ addValue value manager =
          manager { getMap = IntMap.insert nextId value idMap,
                    getNextId = nextId + 1 })
 
+
 -- | Gets a value from it's id
 -- errors if the id does not exist
 getValue :: Int -> IdCache v -> v

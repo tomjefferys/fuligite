@@ -12,6 +12,7 @@ import HogueScript.Path (Path)
 import qualified HogueScript.Path as Path
 import qualified HogueScript.Object as Obj
 import qualified Data.List.NonEmpty as NonEmpty
+import qualified HogueScript.Variable as Var
 
 -- | Evaluate an expression
 eval :: Expr -> EvalMonad2 Expr
@@ -22,16 +23,17 @@ eval expr =
             return $ case mExpr of
                         Just expr' -> expr'
                         _ -> Null
-        -- If we encounter an object definition, turn it into a reference
+        -- If we encounter an object definition,
+        -- turn it into a reference
         (ObjDef obj) -> do
-          oid <- Obj.setObj obj
+          oid <- Obj.set obj
           eval (Obj oid)
           
         (Obj oid) -> do
-          obj <- Obj.getObj oid
+          obj <- Obj.get oid
           pushObj oid
           obj' <- mapM eval obj
-          oid' <- Obj.setObj obj'
+          oid' <- Obj.set obj'
           popObj
           return $ Obj oid'
         (Fapp path args) -> doFunc path args
@@ -54,8 +56,7 @@ doFunc path args = do
 
 builtInFunc :: ([Expr] -> EvalMonad2 Expr)
             -> ([Expr] -> EvalMonad2 Expr)
-builtInFunc fn =
-  (\args -> Env.pushEnv *> fn args <* Env.popEnv)
+builtInFunc fn args = Env.pushEnv *> fn args <* Env.popEnv
 
 -- | Execute a user defined function
 userFunc :: EnvId -> [String] -> Expr -> [Expr] -> EvalMonad2 Expr
@@ -95,7 +96,7 @@ lookupPath path = do
   eid <- getEnvId <$> get
   mVar <- Env.lookupVar path $ NonEmpty.head eid
   case mVar of
-    Just var -> getVar var
+    Just var -> Var.get var
     Nothing -> return Nothing
 
 setPath :: Path -> Expr -> EvalMonad2 ()
@@ -103,7 +104,7 @@ setPath path expr = do
   eid <- getEnvId <$> get
   mVar <- Env.lookupVar path $ NonEmpty.head eid
   case mVar of
-    Just var -> setVar var expr
+    Just var -> Var.set var expr
     Nothing -> return ()
 
 
@@ -113,7 +114,7 @@ findExpr [] expr = return $ Just expr
 findExpr (name:remainder) expr =
   case expr of
     Obj objId -> do
-      obj <- Obj.getObj objId
+      obj <- Obj.get objId
       case Map.lookup name obj of
         Just expr' -> findExpr remainder expr'
         Nothing -> return Nothing
@@ -269,7 +270,7 @@ getPropFromObj :: [ObjKey]
                   -> Expr
                   -> EvalMonad2 Expr
 getPropFromObj (prop:subprops) (Obj oid) = do
-    obj <- Obj.getObj oid
+    obj <- Obj.get oid
     let mVal = Map.lookup prop obj
     val <- case mVal of
             Just val -> return val
