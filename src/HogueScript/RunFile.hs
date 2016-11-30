@@ -1,6 +1,6 @@
 module HogueScript.RunFile where
 
-import HogueScript.Functions (defaultEnv)
+import qualified HogueScript.DefaultState as DS
 import HogueScript.Object (mkObj)
 import HogueScript.ObjKey (ObjKey(..))
 import HogueScript.Expr (Expr(..), Object,
@@ -22,7 +22,7 @@ runFile fileName = do
 
 runObjectFile :: Object -> IO ()
 runObjectFile obj = do
-    let st = makeEvalState defaultEnv mkObj
+    let st = DS.new
     --let eResult = runStateT (runObject obj) st
     let eResult = doEM st (runObject obj)
     let (str, st') = case eResult of
@@ -56,7 +56,7 @@ runPropFile props = do
     -- set up the environment
     let env = foldr
                  (\(key,expr) acc -> Map.insert key expr acc) 
-                 defaultEnv props
+                 DS.defaultEnv props
 
     let mMain = Map.lookup (StrKey "main") env
     case mMain of

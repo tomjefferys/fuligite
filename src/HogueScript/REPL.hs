@@ -1,16 +1,16 @@
 module HogueScript.REPL where
 
 import HogueScript.ObjectParser
-import HogueScript.Object
 import Control.Monad
 import Text.ParserCombinators.Parsec
-import HogueScript.Eval
-import HogueScript.Expr
-import HogueScript.Functions
+import HogueScript.Eval (evaluate)
+import HogueScript.Expr (Expr(..), EvalState)
+import qualified HogueScript.DefaultState as DS
 
+type Result = Either String (Expr, EvalState)
 
 main :: IO ()
-main = run $ makeEvalState defaultEnv mkObj 
+main = run DS.new
 
 run :: EvalState -> IO ()
 run st = do
@@ -33,9 +33,4 @@ run st = do
 
 
     when (line /= "") $ run st'
-
-
-evaluate :: EvalState -> Expr -> Either String (Expr, EvalState)
-evaluate st expr = doEM st (eval expr) 
-
 

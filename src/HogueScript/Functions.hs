@@ -1,7 +1,7 @@
 -- | Built in functions 
 module HogueScript.Functions where
 
-import HogueScript.Expr (Expr(..), Object, BuiltIn(..), EvalMonad2, getEnv,
+import HogueScript.Expr (Expr(..), EvalMonad2, getEnv,
                           parent, PropError(..), getIdentifier,
                           getEnvById, setEnvById, setVariable,
                           getEnvId)
@@ -19,16 +19,6 @@ import qualified HogueScript.Environment as Env
 import qualified HogueScript.Object as Obj
 import qualified HogueScript.Variable as Var
 import qualified Data.List.NonEmpty as NonEmpty
-
-defaultEnv :: Object
-defaultEnv = Map.fromList [
-      (StrKey "stdout", Lit $ S ""),
-      (StrKey "var", HFn $ BuiltIn "var" fnVar),
-      (StrKey "set", HFn $ BuiltIn "set" fnSet),
-      (StrKey "do", HFn $ BuiltIn "do" fnDo),
-      (StrKey "fn", HFn $ BuiltIn "fn" fnFn),
-      (StrKey "+", HFn $ BuiltIn "+" fnSum),
-      (StrKey "print", HFn $ BuiltIn "print" fnPrint)]
 
 
 -- function to declare a variable

@@ -13,6 +13,9 @@ import qualified HogueScript.Path as Path
 import qualified HogueScript.Object as Obj
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified HogueScript.Variable as Var
+import HogueScript.ObjectParser (expression)
+import Text.ParserCombinators.Parsec (parse)
+
 
 -- | Evaluate an expression
 eval :: Expr -> EvalMonad2 Expr
@@ -39,6 +42,26 @@ eval expr =
         (Fapp path args) -> doFunc path args
         e -> return e
 
+type Result = Either String (Expr, EvalState)
+
+parseExpr :: String -> Either String Expr
+parseExpr str = 
+  case parse expression "Hyalite errro" str of
+    Left err -> Left $ show err
+    Right expr -> Right expr
+
+evalString :: EvalState -> String -> Result
+evalString st str = do
+  expr <- parseExpr str
+  evaluate st expr
+
+evalList :: EvalState -> [String] -> Result
+evalList st = 
+  foldM (\(_, st') str -> evalString st' str) (Null, st) 
+
+
+evaluate :: EvalState -> Expr -> Result
+evaluate st expr = doEM st (eval expr) 
 
 -- | Execute a function
 doFunc :: [String]          -- ^ The path to the function
@@ -120,98 +143,6 @@ findExpr (name:remainder) expr =
         Nothing -> return Nothing
     _ -> return Nothing
 
---setPath :: [ObjKey] -> Expr -> EvalMonad2 ()
---setPath [] _ = throwError "Could not find empty path"
---setPath path expr = do
---  env <- getEnv
---  mEnv <- findEnv path env
---  case mEnv of
---    Just (env, _, path) -> 
---      case path of 
---        [name] ->
---          let env' = setVariable name expr env
---          in undefined
---        _ -> throwError "obj setting not supported yet"
---    Nothing -> throwError "Could not find path"
-
-  
--- deprecated
---lookupEnvs :: Env -> [ObjKey] -> EvalMonad2 (Maybe Expr)
---lookupEnvs env path = do
---  mResult <- lookupEnvPath env path
---  case mResult of
---    Just expr -> return $ Just expr
---    Nothing -> 
---      case parent env of
---        Just eid -> do
---          parentEnv <- getEnvById eid
---          lookupEnvs parentEnv path
---        Nothing -> return Nothing
---  
---lookupEnvPath :: Env -> [ObjKey] -> EvalMonad2 (Maybe Expr)
---lookupEnvPath _ [] = return Nothing
---lookupEnvPath env [key] = do
---    let stateObj = getState env
---    return $ Map.lookup key stateObj
---lookupEnvPath env (key:path) = do
---    let stateObj = getState env
---    let mExpr = Map.lookup key stateObj
---    case mExpr of
---      Just (Obj oid) -> lookupObjPath path oid
---      _ -> return Nothing
-  
-
--- | Lookups up a path on the specified object
---lookupObjPath :: [ObjKey] -> ObjId -> EvalMonad2 (Maybe Expr)
---lookupObjPath [] _ = return Nothing
---lookupObjPath [key] oid = do
---  obj <- getObj $ Obj oid
---  return $ Map.lookup key obj
---lookupObjPath (key:path) oid = do
---  obj <- getObj $ Obj oid
---  let expr = Map.lookup key obj
---  case expr of
---    Just (Obj objId) -> lookupObjPath path objId
---      --getObj (Obj objId) >>= lookupObjPath path
---    _ -> return Nothing
-      
-      
-
----- | Lookups up a path
----- Checks in the local object, then in the environment
---lookupPath :: [ObjKey] -- ^ The path
---           -> EvalMonad2 (Either PropError ObjZipper)
---lookupPath path = do
---    obj <- fmap getObject get
---    env <- getEnv
---    let objResult = getPath (ObjZipper setObj [] (Obj obj)) path
---    let envResult = lookupEnvPath env path
---    return $ either (const envResult) Right objResult
---
---lookupEnvPath :: Env
---              -> [ObjKey]
---              -> EvalMonad2 $ Either PropError ObjZipper
---lookupEnvPath env path = do
---  let envObj = getState env
---  
---  let result = getPath (ObjZipper (set 
---
---lookupObjPath
---  
---
----- | Lookups up a path in a list of environments
---lookupEnvPath :: Env -> [ObjKey] -> Either PropError ObjZipper
---lookupEnvPath env path = 
---    let result = Zipper.find findFn (Zipper.fromList envs)
---    in case result of
---        Just zipper -> Right zipper
---        Nothing -> Left $ NO_SUCH_PATH path
---  where 
---    findFn :: Zipper Object -> Maybe ObjZipper
---    findFn zipper = do
---        obj <- Zipper.get zipper
---        let result = getPath (ObjZipper (setEnv zipper) [] (Obj obj)) path
---        either (const Nothing) Just result
 
 
 -- | Logs a failure in the state
@@ -219,27 +150,6 @@ logFailure :: String    -- ^ The failure message
            -> EvalState -- ^ The current state
            -> EvalState -- ^ The updated state
 logFailure str evalSt = evalSt { failure = Just str }
-
--- | Set a property of the local object to an expression.
---setPropM :: [ObjKey] -> Expr -> EvalMonad2 Expr
---setPropM [propName] value = do
---    propMap <- fmap getObject get
---    let oldExpr = Map.findWithDefault Null propName propMap
---    let propMap' = Map.insert propName value propMap
---    modify (setObject propMap')
---    return oldExpr
---setPropM _ _ = error "setPropM must be supplied with a value"
---
----- | sets the local object
---setObject :: Object -> EvalState -> EvalState
---setObject propMap evalSt = evalSt { getObject = propMap }
-
--- | Constructs an evaluation state
---makeEvalState :: Object     -- ^ The environment
---              -> Object     -- ^ The local object
---              -> EvalState  -- ^ Returns a new EvalState
---makeEvalState env obj = 
---    EvalState IntMap.empty [env] obj Nothing
 
 -- | Evaluates a property coercing its value into a string
 evalPropString :: [ObjKey]
@@ -260,7 +170,6 @@ evalPropString path env obj =
 getProp :: [ObjKey] -> EvalMonad2 Expr
 getProp props = do
     mOid <- fmap getObject get
-    --obj <- getObj oid
     
     case mOid of
       Nothing -> throwError "No Object"

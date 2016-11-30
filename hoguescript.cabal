@@ -48,9 +48,14 @@ cabal-version:       >=1.10
 
 library
   -- Modules exported by the library.
-  exposed-modules:  HogueScript.Object, HogueScript.ObjectParser, HogueScript.REPL,
-                    HogueScript.Literal, HogueScript.LiteralType, HogueScript.Expr,
-                    HogueScript.Eval, HogueScript.RunFile, HogueScript.FileLoader
+  exposed-modules:  HogueScript.Object, HogueScript.ObjectParser,
+                    HogueScript.REPL, HogueScript.Literal,
+                    HogueScript.LiteralType, HogueScript.Expr,
+                    HogueScript.Eval, HogueScript.RunFile,
+                    HogueScript.FileLoader, HogueScript.DefaultState
+  other-modules: HogueScript.Environment, HogueScript.Functions
+                 HogueScript.ObjKey, HogueScript.Path,
+                 HogueScript.Variable, Util.IdCache
   
   ghc-options:      -Wall -fwarn-incomplete-uni-patterns -optc-ffast-math
   -- Modules included in this library but not exported.
@@ -72,5 +77,21 @@ executable hoguescript
   hs-source-dirs:   src
   main-Is:          Main.hs
   ghc-options:      -Wall -optc-ffast-math
-  -- other-modules:        
+  other-modules:     HogueScript.Object, HogueScript.ObjectParser,
+                    HogueScript.REPL, HogueScript.Literal,
+                    HogueScript.LiteralType, HogueScript.Expr,
+                    HogueScript.Eval, HogueScript.RunFile,
+                    HogueScript.FileLoader, HogueScript.Environment,
+                    HogueScript.Functions, HogueScript.ObjKey,
+                    HogueScript.Path, HogueScript.Variable,
+                    Util.IdCache       
   build-depends:       base, parsec, mtl, containers, HUnit, extra
+
+test-suite tests
+  hs-source-dirs:   test
+  type:             exitcode-stdio-1.0
+  build-depends:    base, HUnit, tasty, tasty-hunit, hoguescript
+  ghc-options:      -Wall
+  main-is:          Test.hs
+
+
