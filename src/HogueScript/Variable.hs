@@ -3,12 +3,14 @@ module HogueScript.Variable
   get) where
 
 import HogueScript.Expr (Expr(..), Variable(..), EvalMonad2,
-                          EvalState(..), getState)
+                          EvalState(..), ObjId, getState)
 import qualified Util.IdCache as IdCache
 
 import qualified Data.Map as Map
 import qualified Control.Monad.State.Strict as State
 import qualified HogueScript.Object as Obj
+import HogueScript.Path (Path(..))
+import Control.Monad.Except
 
 get :: Variable -> EvalMonad2 (Maybe Expr)
 get (EnvVar eid key) = do
@@ -37,5 +39,26 @@ set (ObjVar oid key) expr = do
   let obj'   = Map.insert key expr obj
   Obj.update oid obj'
 
-  --let cache' = IdCache.updateValue oid obj' cache
-  --State.put st { objCache = cache' } 
+-- Set a prot variable, this should set it in the current object
+-- creating paths a nescessary
+set (ProtoVar _ oid path) expr =
+  setPath oid path
+  
+  where
+    -- look up object, create child object if it doesn't exist
+    setPath :: ObjId -> Path -> EvalMonad2 ()
+    setPath oid' (Item objKey) = 
+      Obj.setProp objKey expr oid'
+    setPath oid'  (Path objKey path') = do
+      mExpr <- Obj.getProp objKey oid'
+      case mExpr of
+        Just (Obj childId) -> setPath childId path'
+        Just _ -> throwError
+           "Can't set path on obj, obj contains non obj prop"
+        Nothing -> do
+          childId <- Obj.new
+          Obj.setProp objKey (Obj childId) oid
+          setPath childId path'
+
+      
+      

@@ -66,8 +66,11 @@ literal = choice [litBool, litChar, litString, litFloat, litInt]
 litExpr :: Parser Expr
 litExpr = try $ Lit <$> literal
 
+identifierChars :: Parser String
+identifierChars = many (choice [alphaNum, char '_', char '+'])
+
 identifier :: Parser String
-identifier = choice [letter, char '+'] <:> many alphaNum
+identifier = choice [letter, char '+', char '_'] <:> identifierChars
 
 --simplePath :: Parser [String]
 --simplePath = try $ (:) <$> identifier <*> many ((char '.') *> identifier)

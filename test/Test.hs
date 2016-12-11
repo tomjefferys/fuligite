@@ -36,10 +36,12 @@ testScript = []
 unitTests :: TestTree
 unitTests = testGroup "Unit tests"
   [ simpleTest,
+    testIdentifiers,
     simpleAssignment,
     testObjectProperties,
     testCustomFunction,
-    testClosure]
+    testClosure,
+    testPrototypeLookup]
 
 hyaliteTest :: String -> [TestComp] -> TestTree
 hyaliteTest title components =
@@ -66,6 +68,16 @@ simpleTest =
   hyaliteTest "Test variable declaration" $
     testScript
        % "(var a 5)" % (Lit $ I 5)
+
+testIdentifiers =
+  hyaliteTest "Test identifiers" $
+    testScript
+      % "(var a234 \"one\")"
+      % "(var ___ \"two\")"
+      % "(var a+b \"three\")"
+      % "a234" % (Lit $ S "one")
+      % "___" % (Lit $ S "two")
+      % "a+b" % (Lit $ S "three")
 
 simpleAssignment =
   hyaliteTest "Test assignment" $
@@ -99,7 +111,16 @@ testClosure =
     % "(add2 3)" % (Lit $ I 5)
     % "(add2 10)" % (Lit $ I 12)
 
-
+testPrototypeLookup =
+  hyaliteTest "Test object prototype lookup" $
+    testScript
+    % "(var o1 {a:5 b:6})"
+    % "(var o2 {__proto:o1 b:10})"
+    % "o2.a" % (Lit $ I 5)
+    % "o2.b" % (Lit $ I 10)
+    % "(set o2.a 20)"
+    % "o2.a" % (Lit $ I 20)
+    % "o1.a" % (Lit $ I 5)
 
     
 

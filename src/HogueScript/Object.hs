@@ -51,6 +51,9 @@ update oid obj = do
   let cache' = IdCache.updateValue oid obj cache
   State.put st { objCache = cache' }
 
+new :: EvalMonad2 ObjId
+new = set mkObj
+
 set :: Object -> EvalMonad2 ObjId
 set obj = do
   st <- State.get
@@ -58,6 +61,17 @@ set obj = do
   let (oid, cache') = IdCache.addValue obj cache
   State.put st { objCache = cache' }
   return oid
+
+setProp :: ObjKey -> Expr -> ObjId -> EvalMonad2 ()
+setProp key value oid = do
+  obj <- get oid
+  update oid $ Map.insert key value obj
+
+getProp :: ObjKey -> ObjId -> EvalMonad2 (Maybe Expr)
+getProp key oid = do
+  obj <- get oid
+  return $ Map.lookup key obj
+
 
 -- | Lookup a variable in an object
 lookupVar :: Path -> ObjId -> EvalMonad2 (Maybe Variable)

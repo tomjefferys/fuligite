@@ -41,7 +41,7 @@ fnVar [name,value] = do
     setEnvById eid env'
 
     return value'
-fnVar _ = error "Illegal argument passed to var"
+fnVar args = error ("Illegal argument passed to var: " ++ show args)
 
 -- function to set a variable
 -- (set expr expr)
