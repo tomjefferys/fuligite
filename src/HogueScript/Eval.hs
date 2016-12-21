@@ -8,7 +8,7 @@ import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import qualified HogueScript.Environment as Env
-import HogueScript.Path (Path)
+import HogueScript.Path (Path(..))
 import qualified HogueScript.Path as Path
 import qualified HogueScript.Object as Obj
 import qualified Data.List.NonEmpty as NonEmpty
@@ -69,21 +69,42 @@ doFunc :: [String]          -- ^ The path to the function
        -> EvalMonad2 Expr
 doFunc path args = do
     -- lookup name, first in obj, then env
-    fun <- lookupPath $ Path.fromList $ fmap StrKey path
+    let path' = Path.fromList $ fmap StrKey path
+    fun <- lookupPath path'
+    mSelf <- case getSelf path' of
+                Just path'' -> lookupPath path''
+                Nothing -> return Nothing
     let fn = case fun of
                 Just (HFn (BuiltIn _ fn')) -> builtInFunc fn'
                 Just (Fn eid params def) -> userFunc eid params def
                 _ -> error ("unknown function" ++ show path)
-    fn args
+    
+    fn args mSelf
     --pushEnv *> fn args <* popEnv
+    --
+    --
+
+getSelf :: Path -> Maybe Path
+getSelf (Item _) = Nothing
+getSelf (Path objKey (Item _)) = Just $ Item objKey
+getSelf (Path objKey path) = 
+  case getSelf path of 
+    Just path' -> Just (Path objKey path')
+    Nothing -> Nothing
+
 
 builtInFunc :: ([Expr] -> EvalMonad2 Expr)
-            -> ([Expr] -> EvalMonad2 Expr)
-builtInFunc fn args = Env.pushEnv *> fn args <* Env.popEnv
+            -> ([Expr] -> Maybe Expr ->  EvalMonad2 Expr)
+builtInFunc fn args _ = Env.pushEnv *> fn args <* Env.popEnv
 
 -- | Execute a user defined function
-userFunc :: EnvId -> [String] -> Expr -> [Expr] -> EvalMonad2 Expr
-userFunc eid params expr args = do
+userFunc :: EnvId
+        -> [String]
+        -> Expr
+        -> [Expr]
+        -> Maybe Expr
+        -> EvalMonad2 Expr
+userFunc eid params expr args mSelf = do
     -- bind and evaluate arguments 
     evalArgs <- mapM eval args
     let zipped = zip params evalArgs
@@ -91,12 +112,19 @@ userFunc eid params expr args = do
     Env.pushEnvStack eid
          *> Env.pushEnv
            *> mapM_ dv zipped
-              *> eval expr <* Env.popEnv
-                             <* Env.popEnvStack
+              *> bindSelf mSelf
+                *> eval expr <* Env.popEnv
+                               <* Env.popEnvStack
 
   where
     dv :: (String,Expr) -> EvalMonad2 Expr 
     dv (param,arg) = declareVar param arg
+    
+    bindSelf :: Maybe Expr -> EvalMonad2 Expr
+    bindSelf mExpr = 
+      case mExpr of
+        Just expr' -> declareVar "self" expr'
+        Nothing -> return Null
 
 -- function to declare a variable
 -- (var name expr)

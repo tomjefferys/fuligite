@@ -41,7 +41,8 @@ unitTests = testGroup "Unit tests"
     testObjectProperties,
     testCustomFunction,
     testClosure,
-    testPrototypeLookup]
+    testPrototypeLookup,
+    testSelfReference]
 
 hyaliteTest :: String -> [TestComp] -> TestTree
 hyaliteTest title components =
@@ -121,6 +122,17 @@ testPrototypeLookup =
     % "(set o2.a 20)"
     % "o2.a" % (Lit $ I 20)
     % "o1.a" % (Lit $ I 5)
+
+testSelfReference = 
+  hyaliteTest "Test implicit self reference" $
+    testScript
+    % "(var account \
+      \  { balance:0 \
+      \    deposit: \
+      \     (fn {n} (set self.balance (+ self.balance n))) } )"
+    % "account.balance" % (Lit $ I 0)
+    % "(account.deposit 10)"
+    % "account.balance" % (Lit $ I 10)
 
     
 
