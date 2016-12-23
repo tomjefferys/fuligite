@@ -70,29 +70,9 @@ fnFn [params, def] = do
     let elems = Map.elems obj
     ids <-  mapM getIdentifier elems
     let ids' = map (foldr1 (++)) ids
-    --def' <- bindVariables elems def
     env <- NonEmpty.head . getEnvId <$> get
-    --return $ Fn env ids' def'
     return $ Fn env ids' def
 fnFn args = throwError $ show $ BAD_ARGS args
-
--- FIXME we shouldn't be doing this
-bindVariables :: [Expr] -> Expr -> EvalMonad2 Expr
-bindVariables params expr =
-  case expr of
-    g@(Get _) -> if g `elem` params
-                  then return g
-                  else eval g
-    (Fapp path exprs) -> 
-      Fapp path <$> mapM (bindVariables params) exprs
-    (Obj oid) -> do
-      obj <- Obj.get oid     
-      obj' <- mapM (bindVariables params) obj
-      objId <- Obj.set obj'
-      return $ Obj objId
-    e -> return e
-     -- Obj <$>     _ -> return expr
-      
 
 -- appends the expressions to the variable __stdout
 fnPrint :: [Expr] -> EvalMonad2 Expr

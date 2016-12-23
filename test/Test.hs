@@ -40,9 +40,11 @@ unitTests = testGroup "Unit tests"
     simpleAssignment,
     testObjectProperties,
     testCustomFunction,
+    testNoParamsFunction,
     testClosure,
     testPrototypeLookup,
-    testSelfReference]
+    testSelfReference,
+    testSelfReference2]
 
 hyaliteTest :: String -> [TestComp] -> TestTree
 hyaliteTest title components =
@@ -104,6 +106,20 @@ testCustomFunction =
     % "(var b 6)"
     % "(sum a b)" % (Lit $ I 10)
 
+testNoParamsFunction = 
+  hyaliteTest "Test no params function" $
+    testScript
+    % "(var ten (fn {} 10))"
+    % "(ten)" % (Lit $ I 10)
+    % "(var mkObj (fn {} {a:20 b:30}))"
+    % "(var obj1 (mkObj))"
+    % "obj1.a" % (Lit $ I 20)
+    % "(var obj2 (mkObj))"
+    % "obj2.a" % (Lit $ I 20)
+    % "(set obj2.a 40)"
+    % "obj2.a" % (Lit $ I 40)
+    % "obj1.a" % (Lit $ I 20)
+
 testClosure = 
   hyaliteTest "Test simple closure" $
     testScript
@@ -134,5 +150,21 @@ testSelfReference =
     % "(account.deposit 10)"
     % "account.balance" % (Lit $ I 10)
 
-    
+testSelfReference2 =
+  hyaliteTest "Test deeply nested self reference" $
+    testScript
+    % "(var mkAccount \
+      \  (fn {} \
+      \    { balance: 0 \
+      \      deposit: \
+      \        (fn {n} (set self.balance (+ self.balance n)))}))"
+    % "(var mkObj (fn {} {balance:3 account:(mkAccount)}))"
+    % "(var obj1 (mkObj))"
+    % "(var obj2 (mkObj))"
+    % "(obj1.account.deposit 123)"
+    % "obj1.balance" % (Lit $ I 3)
+    % "obj2.account.balance" % (Lit $ I 0)
+    % "obj1.account.balance" % (Lit $ I 123)
+    % "(obj1.account.deposit 234)"
+    % "obj1.account.balance" % (Lit $ I 357)
 
