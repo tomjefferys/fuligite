@@ -46,7 +46,7 @@ type Result = Either String (Expr, EvalState)
 
 parseExpr :: String -> Either String Expr
 parseExpr str = 
-  case parse expression "Hyalite errro" str of
+  case parse expression "Hyalite error" str of
     Left err -> Left $ show err
     Right expr -> Right expr
 

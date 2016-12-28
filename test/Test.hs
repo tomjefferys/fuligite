@@ -42,6 +42,7 @@ unitTests = testGroup "Unit tests"
     testCustomFunction,
     testNoParamsFunction,
     testClosure,
+    testMultipleInheritence,
     testPrototypeLookup,
     testSelfReference,
     testSelfReference2]
@@ -132,12 +133,26 @@ testPrototypeLookup =
   hyaliteTest "Test object prototype lookup" $
     testScript
     % "(var o1 {a:5 b:6})"
-    % "(var o2 {__proto:o1 b:10})"
+    % "(var o2 {__protos:{o1} b:10})"
     % "o2.a" % (Lit $ I 5)
     % "o2.b" % (Lit $ I 10)
     % "(set o2.a 20)"
     % "o2.a" % (Lit $ I 20)
     % "o1.a" % (Lit $ I 5)
+
+testMultipleInheritence = 
+  hyaliteTest "Test object with multiple prototypes" $
+    testScript
+    % "(var o1 {a:5 b:6})"
+    % "(var o2 {a:7 b:3})"
+    % "(var o3 {__protos: {o1 o2} b:1})"
+    % "o3.a" % (Lit $ I 5)
+    % "o3.b" % (Lit $ I 1)
+    % "(var o4 {__protos: {o2 o1}})"
+    % "o4.a" % (Lit $ I 7)
+    % "o4.b" % (Lit $ I 3)
+    % "(var o5 {__protos:{o3 o2}})"
+    % "o5.a" % (Lit $ I 5)
 
 testSelfReference = 
   hyaliteTest "Test implicit self reference" $
@@ -167,4 +182,5 @@ testSelfReference2 =
     % "obj1.account.balance" % (Lit $ I 123)
     % "(obj1.account.deposit 234)"
     % "obj1.account.balance" % (Lit $ I 357)
+
 

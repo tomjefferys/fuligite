@@ -90,15 +90,29 @@ lookupVar path oid = do
    mValue'
 
 
--- | Lookup a variable in an objects prototype
+-- | Lookup a variable in an objects prototype(s)
 lookupProtoVar :: Path -> ObjId -> EvalMonad2 (Maybe Variable)
 lookupProtoVar path oid = do
   obj <- get oid
-  let mPrototype = Map.lookup (StrKey "__proto") obj
+  let mPrototype = Map.lookup (StrKey "__protos") obj
   case mPrototype of
     Nothing -> return Nothing
-    Just expr -> doProtoLookup expr
+    Just (Obj protosId) -> do
+      obj' <- get protosId
+      doProtoListLookup $ Map.elems obj'
+    _ -> throwError "__protos is not an object"
   where
+    -- | __protos should be a list of prototypes, iterate through 
+    --   them looking for a match
+    doProtoListLookup :: [Expr] -> EvalMonad2 (Maybe Variable)
+    doProtoListLookup [] = return Nothing
+    doProtoListLookup (expr:exprs) = do
+      mVar <- doProtoLookup expr
+      case mVar of
+        Nothing -> doProtoListLookup exprs
+        result -> return result
+    
+    -- | attempt to find a variable within an individual prototype
     doProtoLookup :: Expr -> EvalMonad2 (Maybe Variable)
     doProtoLookup (Obj poid)  = do
       mvar <- lookupVar path poid
@@ -108,7 +122,7 @@ lookupProtoVar path oid = do
               Just (ProtoVar var _ _) -> Just $ ProtoVar var oid path
               _ -> Nothing
       return result
-    doProtoLookup _ = throwError "__proto is not Object"
+    doProtoLookup _ = throwError "__protos item is not Object"
 
 
 
