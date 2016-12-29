@@ -1,32 +1,31 @@
 {-# LANGUAGE FlexibleInstances #-}
 module HogueScript.Object where
 
-import qualified Data.Map.Strict as Map
-import HogueScript.ObjKey
 import HogueScript.Expr
   (Object, ObjId, EvalMonad2, EvalState(..), Variable(..),
    Expr(..))
 import HogueScript.Path (Path(..))
 import qualified Util.IdCache as IdCache
 import qualified HogueScript.Path as Path
+import qualified HogueScript.PropertyList as PropList
 import qualified Control.Monad.State.Strict as State
 import Control.Monad.Except
 
-class ObjKeySrc a where
-    getKey :: a -> ObjKey
-
-instance ObjKeySrc Integer where
-    getKey = NumKey 
-
-instance ObjKeySrc String where
-    getKey = StrKey
+--class ObjKeySrc a where
+--    getKey :: a -> ObjKey
+--
+--instance ObjKeySrc Integer where
+--    getKey = NumKey 
+--
+--instance ObjKeySrc String where
+--    getKey = StrKey
 
 --setProp :: (LiteralType a, ObjKeySrc s) => (s, a) -> Object -> Object
 --setProp (prop,value) = 
 --    Map.insert (getKey prop) (getExpr value)
 
 mkObj :: Object
-mkObj = Map.empty
+mkObj = PropList.empty
 
 -- TODO move this and setProp to a utilities module
 -- | Operator for easy construction of objects, acts as an
@@ -62,15 +61,15 @@ set obj = do
   State.put st { objCache = cache' }
   return oid
 
-setProp :: ObjKey -> Expr -> ObjId -> EvalMonad2 ()
+setProp :: String -> Expr -> ObjId -> EvalMonad2 ()
 setProp key value oid = do
   obj <- get oid
-  update oid $ Map.insert key value obj
+  update oid $ PropList.insert key value obj
 
-getProp :: ObjKey -> ObjId -> EvalMonad2 (Maybe Expr)
+getProp :: String -> ObjId -> EvalMonad2 (Maybe Expr)
 getProp key oid = do
   obj <- get oid
-  return $ Map.lookup key obj
+  return $ PropList.lookup key obj
 
 
 -- | Lookup a variable in an object
@@ -78,7 +77,7 @@ lookupVar :: Path -> ObjId -> EvalMonad2 (Maybe Variable)
 lookupVar path oid = do
   let (key, mPath) = Path.uncons path 
   obj <- get oid
-  let mValue = Map.lookup key obj
+  let mValue = PropList.lookup key obj
   mValue' <-
       case (mValue, mPath) of
         (Just _, Nothing) -> return $ Just $ ObjVar oid key
@@ -94,12 +93,12 @@ lookupVar path oid = do
 lookupProtoVar :: Path -> ObjId -> EvalMonad2 (Maybe Variable)
 lookupProtoVar path oid = do
   obj <- get oid
-  let mPrototype = Map.lookup (StrKey "__protos") obj
+  let mPrototype = PropList.lookup "__protos" obj
   case mPrototype of
     Nothing -> return Nothing
     Just (Obj protosId) -> do
       obj' <- get protosId
-      doProtoListLookup $ Map.elems obj'
+      doProtoListLookup $ PropList.elems obj'
     _ -> throwError "__protos is not an object"
   where
     -- | __protos should be a list of prototypes, iterate through 

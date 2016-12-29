@@ -11,18 +11,17 @@ module HogueScript.Environment
 ) where
 
 import HogueScript.Expr (Env(..), EnvId, EvalMonad2, Expr(..),
-                          Variable(..), EvalState(..))
-import HogueScript.ObjKey
+                          Variable(..), EvalState(..), ObjKey)
 import Util.IdCache (IdCache)
 import qualified Util.IdCache as IdCache
 import HogueScript.Path (Path(..))
 import qualified HogueScript.Path as Path
-import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import Data.List.NonEmpty ((<|), NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified HogueScript.Object as Object
+import qualified HogueScript.PropertyList as PropList
 
 -- | Gets the parent environment, if
 -- it exists
@@ -37,7 +36,7 @@ lookupVar :: Path -> EnvId -> EvalMonad2 (Maybe Variable)
 lookupVar path eid = do
   let (key, mPath) = Path.uncons path
   env <- getEnv eid
-  let mValue = Map.lookup key $ getState env
+  let mValue = PropList.lookup key $ getState env
   case (mValue, mPath) of
       (Just _,  Nothing)   -> return $ Just $ EnvVar eid key
       (Just (Obj oid), Just path') -> Object.lookupVar path' oid
@@ -53,20 +52,21 @@ getEnv eid = IdCache.getValue eid . envCache <$> get
 getVar :: EnvId -> ObjKey -> EvalMonad2 Expr
 getVar eid key = do
   env <- getEnv eid
-  let mVal = Map.lookup key $ getState env
+  let mVal = PropList.lookup key $ getState env
   maybe (throwError notFoundMssg) return mVal
  where
     notFoundMssg = "Variable " ++ show key ++ " not found."
 
 
 -- | Sets a variable, overwriting any pre existing value
+-- TODO this now creates a new variable, shadowing the old one
 -- TODO do we need to differentiate declaration from setting?
 setVar :: EnvId -> ObjKey -> Expr -> EvalMonad2 Expr
 setVar eid key expr = do
   st <- get
   let cache = envCache st
   let env   = IdCache.getValue eid cache
-  let env'  = env { getState = Map.insert key expr (getState env)}
+  let env'  = env { getState = PropList.insert key expr (getState env)}
   put st { envCache = IdCache.updateValue eid env' cache}
   return expr
 
@@ -122,5 +122,5 @@ setupEnv = IdCache.addValue
             $ IdCache.empty "Environments"
 
 makeEnv :: Maybe EnvId -> Env
-makeEnv mParent = Env mParent Map.empty
+makeEnv mParent = Env mParent PropList.empty
 

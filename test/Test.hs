@@ -145,13 +145,13 @@ testMultipleInheritence =
     testScript
     % "(var o1 {a:5 b:6})"
     % "(var o2 {a:7 b:3})"
-    % "(var o3 {__protos: {o1 o2} b:1})"
+    % "(var o3 {__protos: {o2 o1} b:1})"
     % "o3.a" % (Lit $ I 5)
     % "o3.b" % (Lit $ I 1)
-    % "(var o4 {__protos: {o2 o1}})"
+    % "(var o4 {__protos: {o1 o2}})"
     % "o4.a" % (Lit $ I 7)
     % "o4.b" % (Lit $ I 3)
-    % "(var o5 {__protos:{o3 o2}})"
+    % "(var o5 {__protos:{o2 o3}})"
     % "o5.a" % (Lit $ I 5)
 
 testSelfReference = 

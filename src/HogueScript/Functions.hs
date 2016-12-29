@@ -3,14 +3,12 @@ module HogueScript.Functions where
 
 import HogueScript.Expr (Expr(..), EvalMonad2, getEnv,
                           parent, PropError(..), getIdentifier,
-                          getEnvById, setEnvById, setVariable,
+                          getEnvById, setEnvById, declareVariable,
                           getEnvId)
-import HogueScript.ObjKey (ObjKey(..))
 import HogueScript.Eval (eval)
 import HogueScript.Literal (
                Literal(..), toString, getCommonType, getType, promoteLit)
 
-import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import Control.Monad.Extra (whenJust)
@@ -19,7 +17,7 @@ import qualified HogueScript.Environment as Env
 import qualified HogueScript.Object as Obj
 import qualified HogueScript.Variable as Var
 import qualified Data.List.NonEmpty as NonEmpty
-
+import qualified HogueScript.PropertyList as PropList
 
 -- function to declare a variable
 -- (var name expr)
@@ -37,7 +35,7 @@ fnVar [name,value] = do
             _ -> throwError "Can't get environment"
     env <- getEnvById eid
 
-    let env' = setVariable (StrKey ident) value' env
+    let env' = declareVariable ident value' env
     setEnvById eid env'
 
     return value'
@@ -51,7 +49,7 @@ fnSet :: [Expr] -> EvalMonad2 Expr
 fnSet [name, value] = do
     value' <- eval value
     path <- case name of
-                (Get path) -> return $ Path.fromList $ StrKey <$> path
+                (Get path) -> return $ Path.fromList path
                 _ -> throwError $ show name ++ " is not a path"
     eid <- getEnvId <$> get
     mVar <- Env.lookupVar path $ NonEmpty.head eid
@@ -67,7 +65,7 @@ fnFn [params, def] = do
               ObjDef o -> return o
               _ -> throwError "Function params is bad type"
 
-    let elems = Map.elems obj
+    let elems = PropList.elems obj
     ids <-  mapM getIdentifier elems
     let ids' = map (foldr1 (++)) ids
     env <- NonEmpty.head . getEnvId <$> get

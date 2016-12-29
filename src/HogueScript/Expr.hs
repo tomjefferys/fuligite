@@ -3,9 +3,6 @@
 module HogueScript.Expr where
 
 import HogueScript.Literal
-import HogueScript.ObjKey
-import Data.Map (Map)
-import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import Control.Monad.Identity
@@ -15,14 +12,18 @@ import HogueScript.Path (Path)
 import qualified HogueScript.Path as Path
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
+import HogueScript.PropertyList (PropList)
+import qualified HogueScript.PropertyList as PropList
 
+
+type ObjKey = String
 -- The map of properties for an entity
 -- TODO if this was just an array of values, with optional 
 -- keys, we wouldn't need the differet types of ObjKey
-type Object = Map ObjKey Expr
+type Object = PropList ObjKey Expr
 
 emptyObj :: Object
-emptyObj = Map.empty
+emptyObj = PropList.empty
 
 -- Should object be part of the environment?
 -- Should it be passed through as an implicit self reference tp 
@@ -65,42 +66,9 @@ instance Show BuiltIn where
 
 -- | Variable type, consists of variables owner,
 -- and name
-data Variable = EnvVar EnvId ObjKey
-                | ObjVar ObjId ObjKey
+data Variable = EnvVar EnvId String
+                | ObjVar ObjId String
                 | ProtoVar Variable ObjId Path
-
-
-
--- TODO create Variable module
---getVar :: Variable -> EvalMonad2 (Maybe Expr)
---getVar (EnvVar eid key) = do
---  cache <- envCache <$> get
---  return $ Map.lookup key $ getState $ IdCache.getValue eid cache
---getVar (ObjVar oid key) = do
---  cache <- objCache <$> get
---  return $ Map.lookup key $ IdCache.getValue oid cache
---getVar (ProtoVar proto _ _) = getVar proto
---
---setVar :: Variable -> Expr -> EvalMonad2 ()
---setVar (EnvVar eid key) expr = do
---  st <- get
---  let cache     = envCache st
---  let env       = IdCache.getValue eid $ envCache st
---  let envState' = Map.insert key expr $ getState env
---  let env'      = env { getState                     = envState' }
---  let cache'    = IdCache.updateValue eid env' cache
---  put st { envCache = cache' }
---
---setVar (ObjVar oid key) expr = do
---  st <- get
---  let cache  = objCache st
---  let obj    = IdCache.getValue oid cache
---  let obj'   = Map.insert key expr obj
---  let cache' = IdCache.updateValue oid obj' cache
---  put st { objCache = cache' } 
---
---setVar (ProtoVar _ oid path) expr = 
---  setVarWithPath oid path expr
 
 setVarWithPath :: ObjId -> Path -> Expr -> EvalMonad2 ()
 setVarWithPath oid path expr = do
@@ -108,19 +76,19 @@ setVarWithPath oid path expr = do
   let cache = objCache st
   let obj = IdCache.getValue oid cache
   let (field, mPath) = Path.uncons path
-  let mValue = Map.lookup field obj
+  let mValue = PropList.lookup field obj
   case (mValue, mPath) of
     -- No path remaining, set the field on this object:
     (_, Nothing) -> 
-        let obj' = Map.insert field expr obj
+        let obj' = PropList.insert field expr obj
             cache' = IdCache.updateValue oid obj' cache
         in put st { objCache = cache' }
     -- Path remaining field exists and is object:
     (Just (Obj oid'), Just path') -> setVarWithPath oid' path' expr
     -- Path remaining and field is blank:
     (Nothing, Just path') -> do
-        let (oid', cache') = IdCache.addValue Map.empty cache
-        let obj' = Map.insert field (Obj oid') obj
+        let (oid', cache') = IdCache.addValue emptyObj cache
+        let obj' = PropList.insert field (Obj oid') obj
         let cache'' = IdCache.updateValue oid obj' cache'
         put st { objCache = cache'' }
         setVarWithPath oid' path' expr
@@ -183,9 +151,10 @@ getParent env = do
 
 
 
-setVariable :: ObjKey -> Expr -> Env -> Env
-setVariable name value env = 
-  let state' = Map.insert name value
+-- Creates a new binding between String and Expr
+declareVariable :: String -> Expr -> Env -> Env
+declareVariable name value env = 
+  let state' = PropList.insertNew name value
                 $ getState env
   in env { getState = state' }
 

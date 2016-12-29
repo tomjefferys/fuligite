@@ -2,18 +2,16 @@ module HogueScript.ObjectParser
 ( expression,
   object,
   objectfile,
-  propfile
+--  propfile
 ) where
 
 import Text.ParserCombinators.Parsec
 --import Control.Applicative hiding (many, (<|>))
-import Data.Map.Strict ()
-import qualified Data.Map.Strict as Map
 import Data.Foldable (foldl')
 
 import HogueScript.Literal
 import HogueScript.Expr
-import HogueScript.ObjKey
+import qualified HogueScript.PropertyList as PropList
 
 litBool :: Parser Literal
 litBool = getBool <$> choice [string "true", string "false"]
@@ -92,44 +90,46 @@ funapp = try $
 expression :: Parser Expr
 expression = choice [object, litExpr, funapp, retrieval]
 
+data PropType = StrKey String | NullKey 
+
 -- A Property mapping eg propname : "value"
-propmap :: Parser (ObjKey, Expr)
+propmap :: Parser (PropType, Expr)
 propmap = try $ mkPropMap <$> identifier
                 <*> (spaces *> char ':' *> spaces *> expression)
     where mkPropMap ident expr = (StrKey ident, expr)
 
 -- A Property mapping from number to value eg 4: "value"
-propnum :: Parser (ObjKey, Expr)
-propnum = try $ mkPropNum <$> integer
-                <*> (spaces *> char ':' *> spaces *> expression)
-    where mkPropNum n expr = (NumKey $ read n, expr)
+--propnum :: Parser (ObjKey, Expr)
+--propnum = try $ mkPropNum <$> integer
+--                <*> (spaces *> char ':' *> spaces *> expression)
+--    where mkPropNum n expr = (NumKey $ read n, expr)
+--
+
+
 
 -- A Propery where no key is specified, eg a list
-nullprop :: Parser (ObjKey, Expr)
+nullprop :: Parser (PropType, Expr)
 nullprop = try $ (,) NullKey <$> expression
 
-objectbody :: Parser [(ObjKey, Expr)]
-objectbody = many (choice [propmap, propnum, nullprop] <* spaces)
+objectbody :: Parser [(PropType, Expr)]
+objectbody = many (choice [propmap, nullprop] <* spaces)
 
 object :: Parser Expr
 object = try $ mkObj <$> (char '{' *> spaces *> objectbody <* char '}')
 
-mkObj :: [(ObjKey, Expr)] -> Expr
-mkObj props = ObjDef $ fst
-                 $ foldl' (\(mp,index) (prop,expr) -> 
+-- FIXME, get rid of NumKey option, and complicated indexing logic
+mkObj :: [(PropType, Expr)] -> Expr
+mkObj props = ObjDef 
+                 $ foldl' (\mp (prop,expr) -> 
                         case prop of
-                          NullKey -> (Map.insert (NumKey index) expr mp, 
-                                        index + 1)
-                          NumKey n -> (Map.insert (NumKey n) expr mp,
-                                        n + 1)
-                          StrKey s -> (Map.insert (StrKey s) expr mp,
-                                        index)) 
-                      (Map.empty, 0) props
+                          NullKey -> PropList.add expr mp
+                          StrKey s -> PropList.insert s expr mp) 
+                      PropList.empty props
 
 objectfile :: Parser Expr
 objectfile = mkObj <$> (spaces *> objectbody)
 
-propfile :: Parser [(ObjKey, Expr)]
-propfile = spaces *> (propmap `endBy` spaces)
+--propfile :: Parser [(PropType, Expr)]
+--propfile = spaces *> (propmap `endBy` spaces)
 
 

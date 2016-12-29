@@ -2,8 +2,7 @@ module HogueScript.RunFile where
 
 import qualified HogueScript.DefaultState as DS
 import HogueScript.Object (mkObj)
-import HogueScript.ObjKey (ObjKey(..))
-import HogueScript.Expr (Expr(..), Object,
+import HogueScript.Expr (Expr(..), Object, ObjKey,
                           EvalMonad2, doEM, makeEvalState)
 import HogueScript.Eval (eval, declareVar, lookupPath)
 import HogueScript.Literal (toString)
@@ -12,8 +11,9 @@ import HogueScript.FileLoader (loadFile)
 import Control.Monad.State.Strict
 import Data.Maybe (fromMaybe)
 
-import qualified Data.Map.Strict as Map
 import HogueScript.Path (Path(..))
+import qualified HogueScript.PropertyList as PropList
+import HogueScript.PropertyList (Item(..))
 
 runFile :: String -> IO ()
 runFile fileName = do
@@ -40,12 +40,11 @@ runObject :: Object -> EvalMonad2 ()
 runObject obj =
     -- Bind (but not evaluated) named properties
     -- execute numbered properties
-    forM_ (Map.toList obj)
+    forM_ (PropList.toList obj)
         (\item ->
             case item of
-              (StrKey key, expr) -> bindExpr key expr
-              (NumKey _, expr) -> eval expr
-              (NullKey, _) -> error "Unexpected NullKey found")
+              (KeyValue key expr) -> bindExpr key expr
+              (Value expr) -> eval expr)
   where
     bindExpr :: String -> Expr -> EvalMonad2 Expr
     bindExpr = declareVar 
@@ -55,10 +54,10 @@ runPropFile :: [(ObjKey, Expr)] -> IO ()
 runPropFile props = do
     -- set up the environment
     let env = foldr
-                 (\(key,expr) acc -> Map.insert key expr acc) 
+                 (\(key,expr) acc -> PropList.insert key expr acc) 
                  DS.defaultEnv props
 
-    let mMain = Map.lookup (StrKey "main") env
+    let mMain = PropList.lookup "main" env
     case mMain of
       Just expr -> do
         let eResult = doEM (makeEvalState env mkObj) (eval expr)
@@ -74,7 +73,7 @@ runPropFile props = do
 
 getStdOut :: EvalMonad2 (Maybe String)
 getStdOut  = do
-    mExpr <- lookupPath (Item $ StrKey "stdout")
+    mExpr <- lookupPath (Item "stdout")
     return $ case mExpr of
              Just (Lit l) -> Just $ toString l
              _     -> Nothing

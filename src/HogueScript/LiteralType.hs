@@ -6,7 +6,6 @@ import HogueScript.Expr
 import HogueScript.Literal
 import Control.Monad.Except
 import HogueScript.Eval
-import HogueScript.ObjKey
 
 -- | Represents something that can be coerced into an expression
 class LiteralType a where

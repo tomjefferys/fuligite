@@ -54,8 +54,8 @@ library
                     HogueScript.Eval, HogueScript.RunFile,
                     HogueScript.FileLoader, HogueScript.DefaultState
   other-modules: HogueScript.Environment, HogueScript.Functions
-                 HogueScript.ObjKey, HogueScript.Path,
-                 HogueScript.Variable, Util.IdCache
+                 HogueScript.Path,
+                 HogueScript.Variable, HogueScript.PropertyList, Util.IdCache
   
   ghc-options:      -Wall -fwarn-incomplete-uni-patterns -optc-ffast-math
   -- Modules included in this library but not exported.
@@ -82,8 +82,10 @@ executable hoguescript
                     HogueScript.LiteralType, HogueScript.Expr,
                     HogueScript.Eval, HogueScript.RunFile,
                     HogueScript.FileLoader, HogueScript.Environment,
-                    HogueScript.Functions, HogueScript.ObjKey,
+                    HogueScript.Functions,
                     HogueScript.Path, HogueScript.Variable,
+                    HogueScript.PropertyList,
+                    HogueScript.DefaultState,
                     Util.IdCache       
   build-depends:       base, parsec, mtl, containers, HUnit, extra
 

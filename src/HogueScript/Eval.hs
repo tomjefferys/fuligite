@@ -3,14 +3,13 @@ module HogueScript.Eval where
 
 import HogueScript.Expr
 import HogueScript.Literal
-import HogueScript.ObjKey
-import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import qualified HogueScript.Environment as Env
 import HogueScript.Path (Path(..))
 import qualified HogueScript.Path as Path
 import qualified HogueScript.Object as Obj
+import qualified HogueScript.PropertyList as PropList
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified HogueScript.Variable as Var
 import HogueScript.ObjectParser (expression)
@@ -22,7 +21,7 @@ eval :: Expr -> EvalMonad2 Expr
 eval expr = 
     case expr of
         (Get prop) -> do
-            mExpr <- lookupPath $ Path.fromList $ fmap StrKey prop
+            mExpr <- lookupPath $ Path.fromList prop
             return $ case mExpr of
                         Just expr' -> expr'
                         _ -> Null
@@ -69,7 +68,7 @@ doFunc :: [String]          -- ^ The path to the function
        -> EvalMonad2 Expr
 doFunc path args = do
     -- lookup name, first in obj, then env
-    let path' = Path.fromList $ fmap StrKey path
+    let path' = Path.fromList path
     fun <- lookupPath path'
     mSelf <- case getSelf path' of
                 Just path'' -> lookupPath path''
@@ -130,14 +129,13 @@ userFunc eid params expr args mSelf = do
 -- (var name expr)
 declareVar :: String -> Expr -> EvalMonad2 Expr
 declareVar name value = do
-  let key = StrKey name
   env <- getEnv
   let envState = getState env
   env' <- 
-    case Map.lookup key envState of
+    case PropList.lookup name envState of
       Just _ -> throwError $ "Can't redeclare " ++ name
       Nothing ->
-         return $ env { getState = Map.insert key value envState }
+         return $ env { getState = PropList.insert name value envState }
   setEnv env'
   return value
 
@@ -166,7 +164,7 @@ findExpr (name:remainder) expr =
   case expr of
     Obj objId -> do
       obj <- Obj.get objId
-      case Map.lookup name obj of
+      case PropList.lookup name obj of
         Just expr' -> findExpr remainder expr'
         Nothing -> return Nothing
     _ -> return Nothing
@@ -208,7 +206,7 @@ getPropFromObj :: [ObjKey]
                   -> EvalMonad2 Expr
 getPropFromObj (prop:subprops) (Obj oid) = do
     obj <- Obj.get oid
-    let mVal = Map.lookup prop obj
+    let mVal = PropList.lookup prop obj
     val <- case mVal of
             Just val -> return val
             Nothing -> throwError $ show $  NO_SUCH_PROP prop
@@ -218,7 +216,7 @@ getPropFromObj (prop:subprops) (Obj oid) = do
 getPropFromObj (prop:_) _ =
     throwError $ show $ NO_SUCH_PROP prop
 getPropFromObj [] _ =
-    throwError $ show $ NO_SUCH_PROP $ StrKey "[]"
+    throwError $ show $ NO_SUCH_PROP "[]"
 
 -- | Log a failure.  Not an error in the code, but 
 -- an expected failure (eg trying to open an open door)
