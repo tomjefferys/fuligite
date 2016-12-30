@@ -63,24 +63,24 @@ instance LiteralType String where
 
 -- | Evaluates a property and returns it's value, using 
 -- the supplied getter
-evalProp :: (LiteralType a)
-         => [ObjKey] -- ^ The name of the property
-         -> Object -- ^ The environment
-         -> Object -- ^ The object to evaluate
-         -> (Either String) a -- ^ The result
-evalProp path env obj =
-  evalEM (makeEvalState env obj) (getProp path >>= fromExpr)
+--evalProp :: (LiteralType a)
+--         => [ObjKey] -- ^ The name of the property
+--         -> Object -- ^ The environment
+--         -> Object -- ^ The object to evaluate
+--         -> (Either String) a -- ^ The result
+--evalProp path env obj =
+--  evalEM (makeEvalState env obj) (getProp path >>= fromExpr)
 
-defaultProp :: (LiteralType a)
-            => a
-            -> [ObjKey]
-            -> Object
-            -> Object
-            -> a
-defaultProp def path env obj = 
-    let result = evalProp path env obj 
-    in case result of 
-        Right val -> val
-        Left _ -> def
+--defaultProp :: (LiteralType a)
+--            => a
+--            -> [ObjKey]
+--            -> Object
+--            -> Object
+--            -> a
+--defaultProp def path env obj = 
+--    let result = evalProp path env obj 
+--    in case result of 
+--        Right val -> val
+--        Left _ -> def
 
 

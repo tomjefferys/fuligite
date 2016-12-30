@@ -2,7 +2,6 @@
 module HogueScript.Eval where
 
 import HogueScript.Expr
-import HogueScript.Literal
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import qualified HogueScript.Environment as Env
@@ -33,10 +32,8 @@ eval expr =
           
         (Obj oid) -> do
           obj <- Obj.get oid
-          pushObj oid
           obj' <- mapM eval obj
           oid' <- Obj.set obj'
-          popObj
           return $ Obj oid'
         (Fapp path args) -> doFunc path args
         e -> return e
@@ -176,30 +173,6 @@ logFailure :: String    -- ^ The failure message
            -> EvalState -- ^ The current state
            -> EvalState -- ^ The updated state
 logFailure str evalSt = evalSt { failure = Just str }
-
--- | Evaluates a property coercing its value into a string
-evalPropString :: [ObjKey]
-               -> Object
-               -> Object
-               -> (Either String) String
-evalPropString path env obj = 
-    evalEM (makeEvalState env obj) evalFn
-  where
-    evalFn :: EvalMonad2 String
-    evalFn = getProp path >>= evalToString
-    evalToString :: Expr -> EvalMonad2 String
-    evalToString (Lit l) = return $ toString l
-    evalToString expr = eval expr >>= evalToString
-
-
--- | Get the expression associated with a property
-getProp :: [ObjKey] -> EvalMonad2 Expr
-getProp props = do
-    mOid <- fmap getObject get
-    
-    case mOid of
-      Nothing -> throwError "No Object"
-      (Just oid) -> getPropFromObj props $ Obj oid
 
 getPropFromObj :: [ObjKey]
                   -> Expr

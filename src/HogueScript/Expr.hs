@@ -102,7 +102,6 @@ data EvalState =
         envCache  :: IdCache Env,
         getEnvId  :: NonEmpty EnvId,
         objCache  :: IdCache Object,
-        getObject :: Maybe ObjId,
         failure   :: Maybe String }
 
 emptyEvalState :: EvalState
@@ -113,22 +112,18 @@ emptyEvalState =
       cache
       (NonEmpty.fromList [eid])
       (IdCache.empty "ObjCache")
-      Nothing Nothing
+      Nothing
   
 -- | Constructs an evaluation state
 makeEvalState :: Object     -- ^ The environment
-              -> Object     -- ^ The local object
               -> EvalState  -- ^ Returns a new EvalState
-makeEvalState env obj =
+makeEvalState env =
   let (eid, envs) = IdCache.addValue (Env Nothing env)
                         $ IdCache.empty "EnvCache"
-      (oid, objs) = IdCache.addValue obj
-                        $ IdCache.empty "ObjCache"
   in EvalState
         envs
         (NonEmpty.fromList [eid])
-        objs
-        (Just oid)
+        (IdCache.empty "ObjCache")
         Nothing
 
 type EnvId = Int
@@ -191,16 +186,6 @@ setEnv env = do
   let cache  = envCache st
   let cache' = IdCache.updateValue (NonEmpty.head eid) env cache
   put $ st { envCache = cache' }
-
-pushObj :: (MonadState EvalState m) => ObjId -> m ()
-pushObj oid = do
-    st <- get
-    put st { getObject = Just oid }
-
-popObj :: EvalMonad2 ()
-popObj = do
-    st <- get
-    put st { getObject = Nothing } 
 
 -- The Monad stack used when evaluating expressions
 newtype EvalMonad2 a = EvalMonad2 {

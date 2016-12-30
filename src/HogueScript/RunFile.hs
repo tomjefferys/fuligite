@@ -1,7 +1,6 @@
 module HogueScript.RunFile where
 
 import qualified HogueScript.DefaultState as DS
-import HogueScript.Object (mkObj)
 import HogueScript.Expr (Expr(..), Object, ObjKey,
                           EvalMonad2, doEM, makeEvalState)
 import HogueScript.Eval (eval, declareVar, lookupPath)
@@ -60,7 +59,7 @@ runPropFile props = do
     let mMain = PropList.lookup "main" env
     case mMain of
       Just expr -> do
-        let eResult = doEM (makeEvalState env mkObj) (eval expr)
+        let eResult = doEM (makeEvalState env) (eval expr)
         case eResult of
           Left err     -> print err
           Right (_,st) -> do

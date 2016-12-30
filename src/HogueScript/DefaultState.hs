@@ -3,7 +3,6 @@ module HogueScript.DefaultState where
 import HogueScript.Expr (Expr(..), BuiltIn(..), Object, EvalState, makeEvalState)
 import HogueScript.Functions
 import HogueScript.Literal (Literal(..))
-import HogueScript.Object (mkObj)
 import qualified HogueScript.PropertyList as PropList
 
 defaultEnv :: Object
@@ -17,4 +16,4 @@ defaultEnv = PropList.fromList [
       ("print", HFn $ BuiltIn "print" fnPrint)]
 
 new :: EvalState
-new = makeEvalState defaultEnv mkObj
+new = makeEvalState defaultEnv 
