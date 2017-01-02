@@ -2,8 +2,11 @@ module Util.IdCache where
 
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
+import Data.IntSet (IntSet)
+import qualified Data.IntSet as IntSet
 import Data.Maybe (fromMaybe)
 
+-- TODO rename manager -> cache ?
 
 -- | Manager type.
 -- Holds the current map, and the next id
@@ -11,7 +14,8 @@ data IdCache v =
     IdCache {
         getName :: String,
         getMap :: IntMap v,
-        getNextId :: Int 
+        getNextId :: Int,
+        getFreeIds :: IntSet
     }
 
 member :: Int -> IdCache v -> Bool
@@ -21,11 +25,14 @@ member n manager =
 -- | Makes an empty id cache
 empty :: String -- ^ A name, used for error reporting
       -> IdCache v
-empty name = IdCache name IntMap.empty 0
+empty name = IdCache name IntMap.empty 0 IntSet.empty
 
 -- | Get all the values along with their ids
 allValues :: IdCache v -> [(Int, v)]
 allValues manager = IntMap.toList $ getMap manager
+
+allIds :: IdCache v -> [Int]
+allIds cache = IntMap.keys $ getMap cache
 
 -- | Adds an value to the manager
 -- returns a tuple containing the id assigned to the 
@@ -37,7 +44,6 @@ addValue value manager =
     in (nextId,
          manager { getMap = IntMap.insert nextId value idMap,
                    getNextId = nextId + 1 })
-
 
 -- | Gets a value from it's id
 -- errors if the id does not exist
@@ -70,10 +76,26 @@ updateValue valId val manager =
                      ++ show valId)
 
 removeValue :: Int -> IdCache v -> IdCache v
-removeValue valId manager = 
-    let idMap = getMap manager
+removeValue valId cache = 
+    let idMap = getMap cache
+        freeIds = IntSet.insert valId $ getFreeIds cache
     in if IntMap.member valId idMap
-         then manager { getMap = IntMap.delete valId idMap }
-         else error (getName manager
+         then 
+          let (nextId, freeIds')
+               = findNextId (getNextId cache, freeIds)
+          in cache { getMap     = IntMap.delete valId idMap,
+                     getFreeIds = freeIds',
+                     getNextId  = nextId }
+
+         else error (getName cache
                      ++ "deleteValue; no such id: "
                      ++ show valId)
+
+findNextId :: (Int, IntSet) -> (Int, IntSet)
+findNextId (nextId, freeIds)  = 
+  if IntSet.member (nextId - 1) freeIds
+    then findNextId (nextId - 1, IntSet.delete (nextId - 1) freeIds)
+    else (nextId, freeIds)
+
+
+

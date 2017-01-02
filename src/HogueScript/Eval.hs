@@ -13,6 +13,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import qualified HogueScript.Variable as Var
 import HogueScript.ObjectParser (expression)
 import Text.ParserCombinators.Parsec (parse)
+import HogueScript.GarbageCollector
 
 
 -- | Evaluate an expression

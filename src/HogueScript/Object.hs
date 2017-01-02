@@ -43,6 +43,12 @@ get oid = do
       Just obj -> return obj
       Nothing  -> throwError "not an object"
 
+delete :: ObjId -> EvalMonad2 ()
+delete oid = do
+  st <- State.get
+  let cache = IdCache.removeValue oid $ objCache st
+  State.put st { objCache = cache }
+
 update :: ObjId -> Object -> EvalMonad2 ()
 update oid obj = do
   st <- State.get

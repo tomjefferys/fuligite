@@ -1,6 +1,8 @@
 module HogueScript.Environment 
 ( getParent,
   lookupVar,
+  getEnv,
+  delete,
   getVar,
   setVar,
   pushEnv,
@@ -46,6 +48,13 @@ lookupVar path eid = do
 
 getEnv :: EnvId -> EvalMonad2 Env
 getEnv eid = IdCache.getValue eid . envCache <$> get
+
+delete :: EnvId -> EvalMonad2 ()
+delete eid = do
+  st <- get
+  let cache = IdCache.removeValue eid $ envCache st
+  put st { envCache = cache }
+
 
 -- | gets a varaible from the name environment
 -- throws exception if key is not found
