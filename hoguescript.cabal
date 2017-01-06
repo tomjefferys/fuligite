@@ -55,7 +55,9 @@ library
                     HogueScript.FileLoader, HogueScript.DefaultState
   other-modules: HogueScript.Environment, HogueScript.Functions
                  HogueScript.Path,
-                 HogueScript.Variable, HogueScript.PropertyList, Util.IdCache
+                 HogueScript.Variable, HogueScript.PropertyList,
+                 Util.IdCache,
+                 HogueScript.GarbageCollector
   
   ghc-options:      -Wall -fwarn-incomplete-uni-patterns -optc-ffast-math
   -- Modules included in this library but not exported.
@@ -86,6 +88,7 @@ executable hoguescript
                     HogueScript.Path, HogueScript.Variable,
                     HogueScript.PropertyList,
                     HogueScript.DefaultState,
+                    HogueScript.GarbageCollector,
                     Util.IdCache       
   build-depends:       base, parsec, mtl, containers, HUnit, extra
 

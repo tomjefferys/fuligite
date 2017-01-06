@@ -1,4 +1,5 @@
-module HogueScript.GarbageCollector where
+module HogueScript.GarbageCollector 
+(runGC) where
 
 import HogueScript.Expr (EvalState(..), EvalMonad2, EnvId,
                           Env(..), ObjId, Object, Expr(..))
@@ -57,12 +58,14 @@ moveToBlack item gcState =
   
 
 -- | Perform a full stop the world garbage collection
-runGC :: EvalMonad2 ()
+-- returns number of objects swept
+runGC :: EvalMonad2 Int
 runGC = do
   st <- setupGCState
-  st' <- scanGreys st
+  st' <- doScan st
+  let numToSweep = Set.size $ getWhite st'
   sweepWhites st'
-  return ()
+  return numToSweep
 
 -- | Perform scan until there are no more grey items
 doScan :: GCState -> EvalMonad2 GCState
@@ -87,14 +90,20 @@ setupGCState = do
 -- Examines all the current grey objects
 scanGreys :: GCState -> EvalMonad2 GCState
 scanGreys gcstate = foldM scanGrey gcstate $ getGrey gcstate
-
   where
     -- Scan a single grey item, examines each of it's elements.
     scanGrey :: GCState -> GCItem ->  EvalMonad2 GCState
     scanGrey st item = do
       obj <- getObject item
       st' <- foldM processItem st $ PropList.elems obj
-      return $ moveToBlack item st'
+      st'' <- case item of
+        EnvItem eid -> do
+          mPid <- Env.getParent eid
+          case mPid of 
+            Just pid -> return $ moveToGrey (EnvItem pid) st'
+            Nothing -> return st'
+        _ -> return st'
+      return $ moveToBlack item st''
     
     -- Examine an element of a grey item, and mark any objects
     -- or environments encountered as grey
@@ -116,11 +125,12 @@ getObject item =
 -- | Remove all white items, assuming all greys have been
 -- scanned, these should be objects no longer referenced
 sweepWhites :: GCState -> EvalMonad2 GCState
-sweepWhites gcState = foldM sweepWhite gcState $ getWhite gcState
+sweepWhites gcState = do
+  mapM_ sweepWhite $ getWhite gcState
+  return $ gcState { getWhite = Set.empty }
   where
-    sweepWhite :: GCState -> GCItem -> EvalMonad2 GCState
-    sweepWhite st item = do
+    sweepWhite :: GCItem -> EvalMonad2 ()
+    sweepWhite item =
       case item of
         EnvItem eid -> Env.delete eid
         ObjItem oid -> Obj.delete oid
-      return st { getWhite = Set.delete item $ getWhite st }

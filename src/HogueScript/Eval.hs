@@ -50,7 +50,10 @@ parseExpr str =
 evalString :: EvalState -> String -> Result
 evalString st str = do
   expr <- parseExpr str
-  evaluate st expr
+  (expr', st') <- evaluate st expr
+  (_, st'') <- doEM st' runGC
+  return (expr', st'')
+  
 
 evalList :: EvalState -> [String] -> Result
 evalList st = 
@@ -77,9 +80,7 @@ doFunc path args = do
                 _ -> error ("unknown function" ++ show path)
     
     fn args mSelf
-    --pushEnv *> fn args <* popEnv
-    --
-    --
+    
 
 getSelf :: Path -> Maybe Path
 getSelf (Item _) = Nothing
