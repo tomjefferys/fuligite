@@ -41,8 +41,7 @@ moveToGrey item gcState =
           getGrey  = Set.insert item $ getGrey gcState,
           getBlack = getBlack gcState
     }
-    else error $ "gc does not contain white item "
-                   ++ show item
+    else gcState
 
 -- | Move an item from the grey set to the black set
 moveToBlack :: GCItem -> GCState -> GCState
@@ -53,8 +52,7 @@ moveToBlack item gcState =
           getGrey  = Set.delete item $ getGrey gcState,
           getBlack = Set.insert item $ getBlack gcState
     }
-    else error $ "gc does not contain grey item "
-                   ++ show item
+    else gcState
   
 
 -- | Perform a full stop the world garbage collection
