@@ -11,29 +11,9 @@ import qualified HogueScript.PropertyList as PropList
 import qualified Control.Monad.State.Strict as State
 import Control.Monad.Except
 
---class ObjKeySrc a where
---    getKey :: a -> ObjKey
---
---instance ObjKeySrc Integer where
---    getKey = NumKey 
---
---instance ObjKeySrc String where
---    getKey = StrKey
-
---setProp :: (LiteralType a, ObjKeySrc s) => (s, a) -> Object -> Object
---setProp (prop,value) = 
---    Map.insert (getKey prop) (getExpr value)
-
 mkObj :: Object
 mkObj = PropList.empty
 
--- TODO move this and setProp to a utilities module
--- | Operator for easy construction of objects, acts as an
--- infix setProp, allows for the following
---  mkObj % ("prop1", "value1") % ("prop2", 11 :: Int)
---infixl 5 %
---(%) :: (LiteralType a, ObjKeySrc s) => Object -> (s, a) -> Object
---obj % property = setProp property obj
 
 -- Gets an object from the state
 get :: ObjId -> EvalMonad2 Object 
@@ -115,7 +95,7 @@ lookupProtoVar path oid = do
       mVar <- doProtoLookup expr
       case mVar of
         Nothing -> doProtoListLookup exprs
-        result -> return result
+        result  -> return result
     
     -- | attempt to find a variable within an individual prototype
     doProtoLookup :: Expr -> EvalMonad2 (Maybe Variable)
@@ -123,20 +103,10 @@ lookupProtoVar path oid = do
       mvar <- lookupVar path poid
       let result =
             case mvar of
-              Just var@(ObjVar _ _) -> Just $ ProtoVar var oid path
+              Just var@(ObjVar _ _)   -> Just $ ProtoVar var oid path
               Just (ProtoVar var _ _) -> Just $ ProtoVar var oid path
               _ -> Nothing
       return result
     doProtoLookup _ = throwError "__protos item is not Object"
 
 
-
-
---setProps :: (LiteralType a) => [(String, a)] -> Object -> Object
---setProps props obj = foldr setProp obj props
-
-
-
-
-
-                

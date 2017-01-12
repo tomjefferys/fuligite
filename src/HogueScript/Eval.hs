@@ -32,7 +32,7 @@ eval expr =
           eval (Obj oid)
           
         (Obj oid) -> do
-          obj <- Obj.get oid
+          obj  <- Obj.get oid
           obj' <- mapM eval obj
           oid' <- Obj.set obj'
           return $ Obj oid'
@@ -44,14 +44,14 @@ type Result = Either String (Expr, EvalState)
 parseExpr :: String -> Either String Expr
 parseExpr str = 
   case parse expression "Hyalite error" str of
-    Left err -> Left $ show err
+    Left err   -> Left $ show err
     Right expr -> Right expr
 
 evalString :: EvalState -> String -> Result
 evalString st str = do
-  expr <- parseExpr str
+  expr         <- parseExpr str
   (expr', st') <- evaluate st expr
-  (_, st'') <- doEM st' runGC
+  (_, st'')    <- doEM st' runGC
   return (expr', st'')
   
 
@@ -70,13 +70,13 @@ doFunc :: [String]          -- ^ The path to the function
 doFunc path args = do
     -- lookup name, first in obj, then env
     let path' = Path.fromList path
-    fun <- lookupPath path'
+    fun   <- lookupPath path'
     mSelf <- case getSelf path' of
                 Just path'' -> lookupPath path''
                 Nothing -> return Nothing
     let fn = case fun of
                 Just (HFn (BuiltIn _ fn')) -> builtInFunc fn'
-                Just (Fn eid params def) -> userFunc eid params def
+                Just (Fn eid params def)   -> userFunc eid params def
                 _ -> error ("unknown function" ++ show path)
     
     fn args mSelf
@@ -85,10 +85,7 @@ doFunc path args = do
 getSelf :: Path -> Maybe Path
 getSelf (Item _) = Nothing
 getSelf (Path objKey (Item _)) = Just $ Item objKey
-getSelf (Path objKey path) = 
-  case getSelf path of 
-    Just path' -> Just (Path objKey path')
-    Nothing -> Nothing
+getSelf (Path objKey path) = Path objKey <$> getSelf path
 
 
 builtInFunc :: ([Expr] -> EvalMonad2 Expr)
@@ -97,20 +94,19 @@ builtInFunc fn args _ = Env.pushEnv *> fn args <* Env.popEnv
 
 -- | Execute a user defined function
 userFunc :: EnvId
-        -> [String]
-        -> Expr
-        -> [Expr]
-        -> Maybe Expr
-        -> EvalMonad2 Expr
+         -> [String]
+         -> Expr
+         -> [Expr]
+         -> Maybe Expr
+         -> EvalMonad2 Expr
 userFunc eid params expr args mSelf = do
     -- bind and evaluate arguments 
     evalArgs <- mapM eval args
     let zipped = zip params evalArgs
-    --mapM_ dv zipped
     Env.pushEnvStack eid
          *> Env.pushEnv
-           *> mapM_ dv zipped
-              *> bindSelf mSelf
+           *> mapM_ dv zipped -- ^ Bind arguments
+              *> bindSelf mSelf -- ^ Bind self
                 *> eval expr <* Env.popEnv
                                <* Env.popEnvStack
 
@@ -122,7 +118,7 @@ userFunc eid params expr args mSelf = do
     bindSelf mExpr = 
       case mExpr of
         Just expr' -> declareVar "self" expr'
-        Nothing -> return Null
+        Nothing    -> return Null
 
 -- function to declare a variable
 -- (var name expr)
@@ -132,7 +128,7 @@ declareVar name value = do
   let envState = getState env
   env' <- 
     case PropList.lookup name envState of
-      Just _ -> throwError $ "Can't redeclare " ++ name
+      Just _  -> throwError $ "Can't redeclare " ++ name
       Nothing ->
          return $ env { getState = PropList.insert name value envState }
   setEnv env'
@@ -141,21 +137,19 @@ declareVar name value = do
 
 lookupPath :: Path -> EvalMonad2 (Maybe Expr)
 lookupPath path = do
-  eid <- getEnvId <$> get
+  eid  <- getEnvId <$> get
   mVar <- Env.lookupVar path $ NonEmpty.head eid
   case mVar of
     Just var -> Var.get var
-    Nothing -> return Nothing
+    Nothing  -> return Nothing
 
 setPath :: Path -> Expr -> EvalMonad2 ()
 setPath path expr = do
-  eid <- getEnvId <$> get
+  eid  <- getEnvId <$> get
   mVar <- Env.lookupVar path $ NonEmpty.head eid
   case mVar of
     Just var -> Var.set var expr
-    Nothing -> return ()
-
-
+    Nothing  -> return ()
 
 findExpr :: [ObjKey] -> Expr -> EvalMonad2 (Maybe Expr)
 findExpr [] expr = return $ Just expr
@@ -165,37 +159,22 @@ findExpr (name:remainder) expr =
       obj <- Obj.get objId
       case PropList.lookup name obj of
         Just expr' -> findExpr remainder expr'
-        Nothing -> return Nothing
+        Nothing    -> return Nothing
     _ -> return Nothing
 
-
-
--- | Logs a failure in the state
-logFailure :: String    -- ^ The failure message
-           -> EvalState -- ^ The current state
-           -> EvalState -- ^ The updated state
-logFailure str evalSt = evalSt { failure = Just str }
-
 getPropFromObj :: [ObjKey]
-                  -> Expr
-                  -> EvalMonad2 Expr
+               -> Expr
+               -> EvalMonad2 Expr
 getPropFromObj (prop:subprops) (Obj oid) = do
     obj <- Obj.get oid
     let mVal = PropList.lookup prop obj
     val <- case mVal of
             Just val -> return val
-            Nothing -> throwError $ show $  NO_SUCH_PROP prop
+            Nothing  -> throwError $ show $  NO_SUCH_PROP prop
     case subprops of
       [] -> return val
-      _ -> getPropFromObj subprops val
+      _  -> getPropFromObj subprops val
 getPropFromObj (prop:_) _ =
     throwError $ show $ NO_SUCH_PROP prop
 getPropFromObj [] _ =
     throwError $ show $ NO_SUCH_PROP "[]"
-
--- | Log a failure.  Not an error in the code, but 
--- an expected failure (eg trying to open an open door)
-failExpr :: String -> EvalMonad2 Expr
-failExpr str = do
-    modify $ logFailure str
-    return Null

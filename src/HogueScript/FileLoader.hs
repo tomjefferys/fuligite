@@ -23,7 +23,7 @@ col (_,c) = c
 loadFile :: String -> IO Object
 loadFile fileName = do
     content <- readFile fileName
-    let coords = toCharCoords content
+    let coords  = toCharCoords content
     let coords' = stripComments coords
     let content' = fromCharCoords coords'
     let check = checkPunctuation coords' []
