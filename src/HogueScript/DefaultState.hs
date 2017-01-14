@@ -1,9 +1,10 @@
 module HogueScript.DefaultState where
 
-import HogueScript.Expr (Expr(..), BuiltIn(..), Object, EvalState, makeEvalState)
+import HogueScript.Expr (Expr(..), BuiltIn(..), Object, EvalState)
 import HogueScript.Functions
 import HogueScript.Literal (Literal(..))
 import qualified HogueScript.PropertyList as PropList
+import HogueScript.State
 
 defaultEnv :: Object
 defaultEnv = PropList.fromList [

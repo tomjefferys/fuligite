@@ -125,12 +125,10 @@ userFunc eid params expr args mSelf = do
 declareVar :: String -> Expr -> EvalMonad2 Expr
 declareVar name value = do
   env <- getEnv
-  let envState = getState env
   env' <- 
-    case PropList.lookup name envState of
+    case PropList.lookup name env of
       Just _  -> throwError $ "Can't redeclare " ++ name
-      Nothing ->
-         return $ env { getState = PropList.insert name value envState }
+      Nothing -> return $ PropList.insert name value env
   setEnv env'
   return value
 

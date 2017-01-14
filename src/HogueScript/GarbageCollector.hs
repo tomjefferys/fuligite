@@ -2,7 +2,7 @@ module HogueScript.GarbageCollector
 (runGC) where
 
 import HogueScript.Expr (EvalState(..), EvalMonad2, EnvId,
-                          Env(..), ObjId, Object, Expr(..))
+                          ObjId, Object, Expr(..))
 import qualified HogueScript.Environment as Env
 import qualified HogueScript.Object as Obj
 import Control.Monad.State.Strict
@@ -117,7 +117,7 @@ scanGreys gcstate = foldM scanGrey gcstate $ getGrey gcstate
 getObject :: GCItem -> EvalMonad2 Object
 getObject item = 
   case item of
-    EnvItem eid -> getState <$> Env.getEnv eid
+    EnvItem eid -> Env.getEnv eid
     ObjItem oid -> Obj.get oid
 
 -- | Remove all white items, assuming all greys have been

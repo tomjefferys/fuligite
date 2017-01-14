@@ -2,10 +2,11 @@ module HogueScript.RunFile where
 
 import qualified HogueScript.DefaultState as DS
 import HogueScript.Expr (Expr(..), Object, ObjKey,
-                          EvalMonad2, doEM, makeEvalState)
+                          EvalMonad2, doEM)
 import HogueScript.Eval (eval, declareVar, lookupPath)
 import HogueScript.Literal (toString)
 import HogueScript.FileLoader (loadFile)
+import HogueScript.State
 
 import Control.Monad.State.Strict
 import Data.Maybe (fromMaybe)

@@ -74,54 +74,28 @@ data EvalState =
         getEnvId  :: NonEmpty EnvId,
         objCache  :: IdCache Object }
 
-emptyEvalState :: EvalState
-emptyEvalState = 
-  let (eid, cache) = IdCache.addValue (emptyEnv Nothing)
-                     $ IdCache.empty "EnvCache"
-  in EvalState
-      cache
-      (NonEmpty.fromList [eid])
-      (IdCache.empty "ObjCache")
-  
--- | Constructs an evaluation state
-makeEvalState :: Object     -- ^ The environment
-              -> EvalState  -- ^ Returns a new EvalState
-makeEvalState env =
-  let (eid, envs) = IdCache.addValue (Env Nothing env)
-                        $ IdCache.empty "EnvCache"
-  in EvalState
-        envs
-        (NonEmpty.fromList [eid])
-        (IdCache.empty "ObjCache")
-
 type EnvId = Int
 
 -- | An environment, the gloval env
 -- will not have a parentt
 -- TODO could just be an object with a __PARENT?
 -- We wouldn't be able to support type safety
-data Env = Env {
-  parent   :: Maybe EnvId,
-  getState :: Object
-}
+type Env = Object
+--data Env = Env {
+--  parent   :: Maybe EnvId,
+--  getState :: Object
+--}
 
-getParent :: Env -> EvalMonad2 (Maybe Env)
-getParent env = do
-  let mpid = parent env
-  case mpid of
-    Just pid -> Just <$> getEnvById pid
-    Nothing  -> return Nothing
+--getParent :: Env -> EvalMonad2 (Maybe Env)
+--getParent env = do
+--  let mpid = parent env
+--  case mpid of
+--    Just pid -> Just <$> getEnvById pid
+--    Nothing  -> return Nothing
 
 -- Creates a new binding between String and Expr
 declareVariable :: String -> Expr -> Env -> Env
-declareVariable name value env = 
-  let state' = PropList.insertNew name value
-               $ getState env
-  in env { getState = state' }
-
--- | Make a new empty environment
-emptyEnv :: Maybe EnvId -> Env
-emptyEnv eid = Env eid emptyObj
+declareVariable = PropList.insertNew
 
 getEnvById :: EnvId -> EvalMonad2 Env
 getEnvById eid = do

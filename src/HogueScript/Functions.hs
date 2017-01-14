@@ -2,7 +2,7 @@
 module HogueScript.Functions where
 
 import HogueScript.Expr (Expr(..), EvalMonad2, getEnv,
-                          parent, PropError(..), getIdentifier,
+                          PropError(..), getIdentifier,
                           getEnvById, setEnvById, declareVariable,
                           getEnvId)
 import HogueScript.Eval (eval)
@@ -29,7 +29,7 @@ fnVar [name,value] = do
             (Get [i]) -> return i
             _ -> throwError "Bad name passed to var"
               
-    mEId <- parent <$> getEnv
+    mEId <- Env.lookupParent <$> getEnv
     eid <- case mEId of
             (Just e) -> return e
             _ -> throwError "Can't get environment"
