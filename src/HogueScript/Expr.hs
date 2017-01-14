@@ -70,7 +70,6 @@ data Variable = EnvVar EnvId String
 -- The state of evaluation of a property expression
 data EvalState =
     EvalState {
-        envCache  :: IdCache Env,
         getEnvId  :: NonEmpty EnvId,
         objCache  :: IdCache Object }
 
@@ -78,20 +77,7 @@ type EnvId = Int
 
 -- | An environment, the gloval env
 -- will not have a parentt
--- TODO could just be an object with a __PARENT?
--- We wouldn't be able to support type safety
 type Env = Object
---data Env = Env {
---  parent   :: Maybe EnvId,
---  getState :: Object
---}
-
---getParent :: Env -> EvalMonad2 (Maybe Env)
---getParent env = do
---  let mpid = parent env
---  case mpid of
---    Just pid -> Just <$> getEnvById pid
---    Nothing  -> return Nothing
 
 -- Creates a new binding between String and Expr
 declareVariable :: String -> Expr -> Env -> Env
@@ -99,30 +85,30 @@ declareVariable = PropList.insertNew
 
 getEnvById :: EnvId -> EvalMonad2 Env
 getEnvById eid = do
-  cache <- envCache <$> get
+  cache <- objCache <$> get
   return $ IdCache.getValue eid cache
 
 setEnvById :: EnvId -> Env -> EvalMonad2 ()
 setEnvById eid env = do
   st <- get
-  let cache  = envCache st
+  let cache  = objCache st
   let cache' = IdCache.updateValue eid env cache
-  put st { envCache = cache' }
+  put st { objCache = cache' }
 
 
 getEnv :: EvalMonad2 Env
 getEnv = do
   eid   <- getEnvId <$> get
-  cache <- envCache <$> get
+  cache <- objCache <$> get
   return $ IdCache.getValue (NonEmpty.head eid) cache
 
 setEnv :: Env -> EvalMonad2 ()
 setEnv env = do
   st <- get
   let eid    = getEnvId st
-  let cache  = envCache st
+  let cache  = objCache st
   let cache' = IdCache.updateValue (NonEmpty.head eid) env cache
-  put $ st { envCache = cache' }
+  put $ st { objCache = cache' }
 
 -- The Monad stack used when evaluating expressions
 newtype EvalMonad2 a = EvalMonad2 {

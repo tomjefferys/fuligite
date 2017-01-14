@@ -31,7 +31,7 @@ import qualified HogueScript.PropertyList as PropList
 -- it exists
 getParent :: EnvId -> EvalMonad2 (Maybe EnvId)
 getParent eid = do
-  cache <- envCache <$> get
+  cache <- objCache <$> get
   return $ lookupParent $ IdCache.getValue eid cache
 
 lookupParent :: Env -> Maybe EnvId
@@ -55,13 +55,13 @@ lookupVar path eid = do
                                   (lookupParent env)
 
 getEnv :: EnvId -> EvalMonad2 Env
-getEnv eid = IdCache.getValue eid . envCache <$> get
+getEnv eid = IdCache.getValue eid . objCache <$> get
 
 delete :: EnvId -> EvalMonad2 ()
 delete eid = do
   st <- get
-  let cache = IdCache.removeValue eid $ envCache st
-  put st { envCache = cache }
+  let cache = IdCache.removeValue eid $ objCache st
+  put st { objCache = cache }
 
 
 -- | gets a varaible from the name environment
@@ -81,10 +81,10 @@ getVar eid key = do
 setVar :: EnvId -> ObjKey -> Expr -> EvalMonad2 Expr
 setVar eid key expr = do
   st <- get
-  let cache = envCache st
+  let cache = objCache st
   let env   = IdCache.getValue eid cache
   let env'  = PropList.insert key expr env
-  put st { envCache = IdCache.updateValue eid env' cache}
+  put st { objCache = IdCache.updateValue eid env' cache}
   return expr
 
 -- | Create a new environment, whose parent is the 
@@ -97,10 +97,10 @@ pushEnv = do
   let (eid, cache) =
        IdCache.addValue
           (empty $ Just $ NonEmpty.head envStack)
-          $ envCache st        
+          $ objCache st        
           
   put st { getEnvId = eid :| NonEmpty.tail envStack,
-           envCache = cache }
+           objCache = cache }
   return eid
 
 -- | Pops the current environment from the stack

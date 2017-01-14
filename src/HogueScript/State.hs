@@ -8,19 +8,17 @@ import qualified Data.List.NonEmpty as NonEmpty
 emptyEvalState :: EvalState
 emptyEvalState = 
   let (eid, cache) = IdCache.addValue (Env.empty Nothing)
-                     $ IdCache.empty "EnvCache"
+                     $ IdCache.empty "ObjCache"
   in EvalState
-      cache
       (NonEmpty.fromList [eid])
-      (IdCache.empty "ObjCache")
+      cache
   
 -- | Constructs an evaluation state
 makeEvalState :: Object     -- ^ The environment
               -> EvalState  -- ^ Returns a new EvalState
 makeEvalState env =
-  let (eid, envs) = IdCache.addValue env
-                        $ IdCache.empty "EnvCache"
+  let (eid, cache) = IdCache.addValue env
+                        $ IdCache.empty "ObjCache"
   in EvalState
-        envs
         (NonEmpty.fromList [eid])
-        (IdCache.empty "ObjCache")
+        cache

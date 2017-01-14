@@ -14,7 +14,7 @@ import qualified HogueScript.PropertyList as PropList
 
 get :: Variable -> EvalMonad2 (Maybe Expr)
 get (EnvVar eid key) = do
-  cache <- envCache <$> State.get
+  cache <- objCache <$> State.get
   return $ PropList.lookup key $ IdCache.getValue eid cache
 get (ObjVar oid key) = do
   cache <- objCache <$> State.get
@@ -24,11 +24,11 @@ get (ProtoVar proto _ _) = get proto
 set :: Variable -> Expr -> EvalMonad2 ()
 set (EnvVar eid key) expr = do
   st <- State.get
-  let cache  = envCache st
-  let env    = IdCache.getValue eid $ envCache st
+  let cache  = objCache st
+  let env    = IdCache.getValue eid cache
   let env'   = PropList.insert key expr env
   let cache' = IdCache.updateValue eid env' cache
-  State.put st { envCache = cache' }
+  State.put st { objCache = cache' }
 
 set (ObjVar oid key) expr = do
   --st <- State.get
