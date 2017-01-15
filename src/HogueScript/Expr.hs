@@ -14,7 +14,6 @@ import qualified Data.List.NonEmpty as NonEmpty
 import HogueScript.PropertyList (PropList)
 import qualified HogueScript.PropertyList as PropList
 
-
 type ObjKey = String
 
 -- The map of properties for an entity

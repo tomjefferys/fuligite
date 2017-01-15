@@ -2,6 +2,7 @@ module HogueScript.DefaultState where
 
 import HogueScript.Expr (Expr(..), BuiltIn(..), Object, EvalState)
 import HogueScript.Functions
+import HogueScript.Function.Arithmetic (fnSum)
 import HogueScript.Literal (Literal(..))
 import qualified HogueScript.PropertyList as PropList
 import HogueScript.State

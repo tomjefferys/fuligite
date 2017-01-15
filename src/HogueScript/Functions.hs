@@ -6,9 +6,7 @@ import HogueScript.Expr (Expr(..), EvalMonad2, getEnv,
                           getEnvById, setEnvById, declareVariable,
                           getEnvId)
 import HogueScript.Eval (eval)
-import HogueScript.Literal (
-               Literal(..), toString, getCommonType, getType, promoteLit)
-
+import HogueScript.Literal (Literal(..), toString) 
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import Control.Monad.Extra (whenJust)
@@ -103,35 +101,6 @@ fnDo (expr:exprs) = do
     fnDo exprs
 fnDo _ = error "Illegal argument passed to do"
 
--- Sum function, adds up arguments
-{-# ANN fnSum "HLint: ignore Use sum" #-}
-fnSum :: [Expr] -> EvalMonad2 Expr
-fnSum exprs = do
-    literals <- mapM eval exprs
-    summables <- promoteToSummables literals
-    return $ Lit $ foldr1 add summables
-  where
-    add :: Literal -> Literal -> Literal
-    add (B b1) (B b2) = B $ b1 || b2
-    add (C _) (C _)   = error "Can't add chars"
-    add (I i1) (I i2) = I $ i1 + i2
-    add (F f1) (F f2) = F $ f1 + f2
-    add (S s1) (S s2) = S $ s1 ++ s2
-    add _ _ = error "Attempting to add different literal types"
-
-        
-promoteToSummables :: [Expr] -> EvalMonad2 [Literal]
-promoteToSummables exprs = do
-    literals <- mapM toLiteral exprs
-    let commonType = foldr1 getCommonType $ fmap getType literals
-    return $ map (promoteLit commonType) literals
-  where
-    toLiteral :: Expr -> EvalMonad2 Literal
-    toLiteral expr = do
-      result <- eval expr
-      case result of 
-          (Lit l) -> return l
-          _ -> error $ show expr ++ " is not equal to literal"
 
     
     

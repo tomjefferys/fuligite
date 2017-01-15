@@ -58,7 +58,8 @@ library
                  HogueScript.Variable, HogueScript.PropertyList,
                  Util.IdCache,
                  HogueScript.GarbageCollector,
-                 HogueScript.State
+                 HogueScript.State,
+                 HogueScript.Function.Arithmetic
   
   ghc-options:      -Wall -fwarn-incomplete-uni-patterns -optc-ffast-math
   -- Modules included in this library but not exported.
@@ -91,7 +92,8 @@ executable hoguescript
                     HogueScript.DefaultState,
                     HogueScript.GarbageCollector,
                     Util.IdCache,
-                    HogueScript.State
+                    HogueScript.State,
+                    HogueScript.Function.Arithmetic
   build-depends:       base, parsec, mtl, containers, HUnit, extra
 
 test-suite tests
