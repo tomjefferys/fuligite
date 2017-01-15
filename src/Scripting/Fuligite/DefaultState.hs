@@ -1,11 +1,11 @@
-module HogueScript.DefaultState where
+module Scripting.Fuligite.DefaultState where
 
-import HogueScript.Expr (Expr(..), BuiltIn(..), Object, EvalState)
-import HogueScript.Functions
-import HogueScript.Function.Arithmetic (fnSum)
-import HogueScript.Literal (Literal(..))
-import qualified HogueScript.PropertyList as PropList
-import HogueScript.State
+import Scripting.Fuligite.Expr (Expr(..), BuiltIn(..), Object, EvalState)
+import Scripting.Fuligite.Functions
+import Scripting.Fuligite.Function.Arithmetic (fnSum)
+import Scripting.Fuligite.Literal (Literal(..))
+import qualified Scripting.Fuligite.PropertyList as PropList
+import Scripting.Fuligite.State
 
 defaultEnv :: Object
 defaultEnv = PropList.fromList [

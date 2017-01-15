@@ -1,4 +1,4 @@
-module HogueScript.Environment 
+module Scripting.Fuligite.Environment 
 ( getParent,
   lookupParent,
   lookupVar,
@@ -14,18 +14,18 @@ module HogueScript.Environment
   empty,
 ) where
 
-import HogueScript.Expr (Env, EnvId, EvalMonad2, Expr(..),
+import Scripting.Fuligite.Expr (Env, EnvId, EvalMonad2, Expr(..),
                           Variable(..), EvalState(..), ObjKey)
 import Util.IdCache (IdCache)
 import qualified Util.IdCache as IdCache
-import HogueScript.Path (Path(..))
-import qualified HogueScript.Path as Path
+import Scripting.Fuligite.Path (Path(..))
+import qualified Scripting.Fuligite.Path as Path
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import Data.List.NonEmpty ((<|), NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
-import qualified HogueScript.Object as Object
-import qualified HogueScript.PropertyList as PropList
+import qualified Scripting.Fuligite.Object as Object
+import qualified Scripting.Fuligite.PropertyList as PropList
 
 -- | Gets the parent environment, if
 -- it exists

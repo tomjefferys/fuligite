@@ -1,4 +1,4 @@
-module HogueScript.Path where
+module Scripting.Fuligite.Path where
 
 data Path = Item String | Path String Path
   deriving (Show)

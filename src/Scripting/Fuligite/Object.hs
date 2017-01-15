@@ -1,13 +1,13 @@
 {-# LANGUAGE FlexibleInstances #-}
-module HogueScript.Object where
+module Scripting.Fuligite.Object where
 
-import HogueScript.Expr
+import Scripting.Fuligite.Expr
   (Object, ObjId, EvalMonad2, EvalState(..), Variable(..),
    Expr(..))
-import HogueScript.Path (Path(..))
+import Scripting.Fuligite.Path (Path(..))
 import qualified Util.IdCache as IdCache
-import qualified HogueScript.Path as Path
-import qualified HogueScript.PropertyList as PropList
+import qualified Scripting.Fuligite.Path as Path
+import qualified Scripting.Fuligite.PropertyList as PropList
 import qualified Control.Monad.State.Strict as State
 import Control.Monad.Except
 

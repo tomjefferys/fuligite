@@ -1,4 +1,4 @@
-module HogueScript.ObjectParser 
+module Scripting.Fuligite.ObjectParser 
 ( expression,
   object,
   objectfile,
@@ -9,9 +9,9 @@ import Text.ParserCombinators.Parsec
 --import Control.Applicative hiding (many, (<|>))
 import Data.Foldable (foldl')
 
-import HogueScript.Literal
-import HogueScript.Expr
-import qualified HogueScript.PropertyList as PropList
+import Scripting.Fuligite.Literal
+import Scripting.Fuligite.Expr
+import qualified Scripting.Fuligite.PropertyList as PropList
 
 litBool :: Parser Literal
 litBool = getBool <$> choice [string "true", string "false"]

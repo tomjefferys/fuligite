@@ -1,19 +1,19 @@
 {-# LANGUAGE FlexibleContexts #-}
-module HogueScript.Eval where
+module Scripting.Fuligite.Eval where
 
-import HogueScript.Expr
+import Scripting.Fuligite.Expr
 import Control.Monad.State.Strict
 import Control.Monad.Except
-import qualified HogueScript.Environment as Env
-import HogueScript.Path (Path(..))
-import qualified HogueScript.Path as Path
-import qualified HogueScript.Object as Obj
-import qualified HogueScript.PropertyList as PropList
+import qualified Scripting.Fuligite.Environment as Env
+import Scripting.Fuligite.Path (Path(..))
+import qualified Scripting.Fuligite.Path as Path
+import qualified Scripting.Fuligite.Object as Obj
+import qualified Scripting.Fuligite.PropertyList as PropList
 import qualified Data.List.NonEmpty as NonEmpty
-import qualified HogueScript.Variable as Var
-import HogueScript.ObjectParser (expression)
+import qualified Scripting.Fuligite.Variable as Var
+import Scripting.Fuligite.ObjectParser (expression)
 import Text.ParserCombinators.Parsec (parse)
-import HogueScript.GarbageCollector
+import Scripting.Fuligite.GarbageCollector
 
 
 -- | Evaluate an expression

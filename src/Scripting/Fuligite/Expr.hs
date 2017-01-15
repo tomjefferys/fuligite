@@ -1,18 +1,18 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
-module HogueScript.Expr where
+module Scripting.Fuligite.Expr where
 
-import HogueScript.Literal
+import Scripting.Fuligite.Literal
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import Control.Monad.Identity
 import Util.IdCache (IdCache)
 import qualified Util.IdCache as IdCache 
-import HogueScript.Path (Path)
+import Scripting.Fuligite.Path (Path)
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
-import HogueScript.PropertyList (PropList)
-import qualified HogueScript.PropertyList as PropList
+import Scripting.Fuligite.PropertyList (PropList)
+import qualified Scripting.Fuligite.PropertyList as PropList
 
 type ObjKey = String
 

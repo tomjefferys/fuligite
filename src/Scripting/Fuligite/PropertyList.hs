@@ -4,7 +4,7 @@
 -- | Custom data type to represent a sequence of properties
 -- each property may or may not have a key associated with it, 
 -- and duplicates are allowed
-module HogueScript.PropertyList 
+module Scripting.Fuligite.PropertyList 
 ( PropList,
   empty,
   elems,

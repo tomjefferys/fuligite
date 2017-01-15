@@ -1,11 +1,11 @@
 -- | LiteralType instances
 {-# LANGUAGE FlexibleInstances #-}
-module HogueScript.LiteralType where
+module Scripting.Fuligite.LiteralType where
 
-import HogueScript.Expr
-import HogueScript.Literal
+import Scripting.Fuligite.Expr
+import Scripting.Fuligite.Literal
 import Control.Monad.Except
-import HogueScript.Eval
+import Scripting.Fuligite.Eval
 
 -- | Represents something that can be coerced into an expression
 class LiteralType a where

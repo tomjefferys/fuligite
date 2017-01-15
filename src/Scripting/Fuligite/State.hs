@@ -1,7 +1,7 @@
-module HogueScript.State where
+module Scripting.Fuligite.State where
 
-import HogueScript.Expr
-import qualified HogueScript.Environment as Env
+import Scripting.Fuligite.Expr
+import qualified Scripting.Fuligite.Environment as Env
 import qualified Util.IdCache as IdCache
 import qualified Data.List.NonEmpty as NonEmpty
 

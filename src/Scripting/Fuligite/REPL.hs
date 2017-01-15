@@ -1,11 +1,11 @@
-module HogueScript.REPL where
+module Scripting.Fuligite.REPL where
 
-import HogueScript.ObjectParser
+import Scripting.Fuligite.ObjectParser
 import Control.Monad
 import Text.ParserCombinators.Parsec
-import HogueScript.Eval (evaluate)
-import HogueScript.Expr (Expr(..), EvalState)
-import qualified HogueScript.DefaultState as DS
+import Scripting.Fuligite.Eval (evaluate)
+import Scripting.Fuligite.Expr (Expr(..), EvalState)
+import qualified Scripting.Fuligite.DefaultState as DS
 
 type Result = Either String (Expr, EvalState)
 

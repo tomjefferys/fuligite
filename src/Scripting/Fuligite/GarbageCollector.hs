@@ -1,15 +1,15 @@
-module HogueScript.GarbageCollector 
+module Scripting.Fuligite.GarbageCollector 
 (runGC) where
 
-import HogueScript.Expr (EvalState(..), EvalMonad2,
+import Scripting.Fuligite.Expr (EvalState(..), EvalMonad2,
                           ObjId, Expr(..))
-import qualified HogueScript.Object as Obj
+import qualified Scripting.Fuligite.Object as Obj
 import Control.Monad.State.Strict
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Util.IdCache as IdCache
 import Control.Monad (foldM)
-import qualified HogueScript.PropertyList as PropList
+import qualified Scripting.Fuligite.PropertyList as PropList
 
 -- | Data structure for tri colour mark and sweep, 
 -- ultimately this could be stored with the state
@@ -57,7 +57,7 @@ runGC = do
   st <- setupGCState
   st' <- doScan st
   let numToSweep = Set.size $ getWhite st'
-  sweepWhites st'
+  _ <- sweepWhites st'
   return numToSweep
 
 -- | Perform scan until there are no more grey items

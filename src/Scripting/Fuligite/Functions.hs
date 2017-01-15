@@ -1,21 +1,21 @@
 -- | Built in functions 
-module HogueScript.Functions where
+module Scripting.Fuligite.Functions where
 
-import HogueScript.Expr (Expr(..), EvalMonad2, getEnv,
+import Scripting.Fuligite.Expr (Expr(..), EvalMonad2, getEnv,
                           PropError(..), getIdentifier,
                           getEnvById, setEnvById, declareVariable,
                           getEnvId)
-import HogueScript.Eval (eval)
-import HogueScript.Literal (Literal(..), toString) 
+import Scripting.Fuligite.Eval (eval)
+import Scripting.Fuligite.Literal (Literal(..), toString) 
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import Control.Monad.Extra (whenJust)
-import qualified HogueScript.Path as Path
-import qualified HogueScript.Environment as Env
-import qualified HogueScript.Object as Obj
-import qualified HogueScript.Variable as Var
+import qualified Scripting.Fuligite.Path as Path
+import qualified Scripting.Fuligite.Environment as Env
+import qualified Scripting.Fuligite.Object as Obj
+import qualified Scripting.Fuligite.Variable as Var
 import qualified Data.List.NonEmpty as NonEmpty
-import qualified HogueScript.PropertyList as PropList
+import qualified Scripting.Fuligite.PropertyList as PropList
 
 -- function to declare a variable
 -- (var name expr)

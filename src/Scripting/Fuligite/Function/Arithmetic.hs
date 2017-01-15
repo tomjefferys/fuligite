@@ -1,4 +1,4 @@
-module HogueScript.Function.Arithmetic 
+module Scripting.Fuligite.Function.Arithmetic 
 ( fnSum,
   fnSubtract,
   fnProduct,
@@ -8,9 +8,9 @@ module HogueScript.Function.Arithmetic
 
 import Control.Monad.Except
 
-import HogueScript.Expr (Expr(..), EvalMonad2)
-import HogueScript.Eval (eval)
-import HogueScript.Literal (Literal(..), getType,
+import Scripting.Fuligite.Expr (Expr(..), EvalMonad2)
+import Scripting.Fuligite.Eval (eval)
+import Scripting.Fuligite.Literal (Literal(..), getType,
                             getCommonType, promoteLit)
 
 -- Sum function, adds up arguments

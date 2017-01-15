@@ -1,16 +1,16 @@
-module HogueScript.Variable
+module Scripting.Fuligite.Variable
 ( set,
   get) where
 
-import HogueScript.Expr (Expr(..), Variable(..), EvalMonad2,
+import Scripting.Fuligite.Expr (Expr(..), Variable(..), EvalMonad2,
                           EvalState(..), ObjId)
 import qualified Util.IdCache as IdCache
 
 import qualified Control.Monad.State.Strict as State
-import qualified HogueScript.Object as Obj
-import HogueScript.Path (Path(..))
+import qualified Scripting.Fuligite.Object as Obj
+import Scripting.Fuligite.Path (Path(..))
 import Control.Monad.Except
-import qualified HogueScript.PropertyList as PropList
+import qualified Scripting.Fuligite.PropertyList as PropList
 
 get :: Variable -> EvalMonad2 (Maybe Expr)
 get (EnvVar eid key) = do

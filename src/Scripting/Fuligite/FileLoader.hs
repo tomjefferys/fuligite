@@ -1,9 +1,9 @@
-module HogueScript.FileLoader 
+module Scripting.Fuligite.FileLoader 
 ( loadFile
 ) where
 
-import HogueScript.ObjectParser (objectfile)
-import HogueScript.Expr (Object, Expr(..))
+import Scripting.Fuligite.ObjectParser (objectfile)
+import Scripting.Fuligite.Expr (Object, Expr(..))
 import Text.ParserCombinators.Parsec (parse)
 
 -- | (row,column)

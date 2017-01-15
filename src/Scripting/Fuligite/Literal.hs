@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
-module HogueScript.Literal where
+module Scripting.Fuligite.Literal where
 
 import Data.List (find)
 import Data.Maybe (fromMaybe)

@@ -1,7 +1,7 @@
 module Main where
 
-import qualified HogueScript.REPL as REPL
-import HogueScript.RunFile
+import qualified Scripting.Fuligite.REPL as REPL
+import Scripting.Fuligite.RunFile
 import System.Environment (getArgs)
 
 -- | Main function, check if we've been suppled a file

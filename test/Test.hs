@@ -4,10 +4,10 @@
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import HogueScript.Expr (Expr(..), EvalState)
-import HogueScript.Eval (evalString)
-import HogueScript.Literal (Literal(..))
-import qualified HogueScript.DefaultState as DS
+import Scripting.Fuligite.Expr (Expr(..), EvalState)
+import Scripting.Fuligite.Eval (evalString)
+import Scripting.Fuligite.Literal (Literal(..))
+import qualified Scripting.Fuligite.DefaultState as DS
 
 main = defaultMain tests
 

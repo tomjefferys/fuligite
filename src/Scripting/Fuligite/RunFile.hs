@@ -1,19 +1,19 @@
-module HogueScript.RunFile where
+module Scripting.Fuligite.RunFile where
 
-import qualified HogueScript.DefaultState as DS
-import HogueScript.Expr (Expr(..), Object, ObjKey,
+import qualified Scripting.Fuligite.DefaultState as DS
+import Scripting.Fuligite.Expr (Expr(..), Object, ObjKey,
                           EvalMonad2, doEM)
-import HogueScript.Eval (eval, declareVar, lookupPath)
-import HogueScript.Literal (toString)
-import HogueScript.FileLoader (loadFile)
-import HogueScript.State
+import Scripting.Fuligite.Eval (eval, declareVar, lookupPath)
+import Scripting.Fuligite.Literal (toString)
+import Scripting.Fuligite.FileLoader (loadFile)
+import Scripting.Fuligite.State
 
 import Control.Monad.State.Strict
 import Data.Maybe (fromMaybe)
 
-import HogueScript.Path (Path(..))
-import qualified HogueScript.PropertyList as PropList
-import HogueScript.PropertyList (Item(..))
+import Scripting.Fuligite.Path (Path(..))
+import qualified Scripting.Fuligite.PropertyList as PropList
+import Scripting.Fuligite.PropertyList (Item(..))
 
 runFile :: String -> IO ()
 runFile fileName = do
