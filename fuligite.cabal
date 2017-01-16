@@ -59,7 +59,8 @@ library
                  Util.IdCache,
                  Scripting.Fuligite.GarbageCollector,
                  Scripting.Fuligite.State,
-                 Scripting.Fuligite.Function.Arithmetic
+                 Scripting.Fuligite.Function.Arithmetic,
+                 Scripting.Fuligite.Function.Control
   
   ghc-options:      -Wall -fwarn-incomplete-uni-patterns -optc-ffast-math
   -- Modules included in this library but not exported.
@@ -93,7 +94,9 @@ executable fuligite
                     Scripting.Fuligite.GarbageCollector,
                     Util.IdCache,
                     Scripting.Fuligite.State,
-                    Scripting.Fuligite.Function.Arithmetic
+                    Scripting.Fuligite.Function.Arithmetic,
+                    Scripting.Fuligite.Function.Control
+
   build-depends:       base, parsec, mtl, containers, HUnit, extra
 
   default-language:    Haskell2010

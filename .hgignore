@@ -1,6 +1,0 @@
-syntax: glob
-.cabal*
-dist
-*.swp
-cabal.sandbox.config
-.stack-work*

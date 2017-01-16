@@ -9,6 +9,7 @@ import Scripting.Fuligite.Path (Path(..))
 import qualified Scripting.Fuligite.Path as Path
 import qualified Scripting.Fuligite.Object as Obj
 import qualified Scripting.Fuligite.PropertyList as PropList
+import qualified Scripting.Fuligite.Literal as Lit
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Scripting.Fuligite.Variable as Var
 import Scripting.Fuligite.ObjectParser (expression)
@@ -59,7 +60,6 @@ evalList :: EvalState -> [String] -> Result
 evalList st = 
   foldM (\(_, st') str -> evalString st' str) (Null, st) 
 
-
 evaluate :: EvalState -> Expr -> Result
 evaluate st expr = doEM st (eval expr) 
 
@@ -86,6 +86,12 @@ getSelf :: Path -> Maybe Path
 getSelf (Item _) = Nothing
 getSelf (Path objKey (Item _)) = Just $ Item objKey
 getSelf (Path objKey path) = Path objKey <$> getSelf path
+
+-- | Interpret a boolean value as an expression
+boolValue :: Expr -> Bool
+boolValue (Lit l) = Lit.boolValue l
+boolValue Null    = False
+boolValue _       = True
 
 
 builtInFunc :: ([Expr] -> EvalMonad2 Expr)

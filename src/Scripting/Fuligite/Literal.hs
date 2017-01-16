@@ -3,6 +3,7 @@ module Scripting.Fuligite.Literal where
 
 import Data.List (find)
 import Data.Maybe (fromMaybe)
+import Data.Char (chr)
 
 -- | Represents a literal type
 data Literal = B Bool | C Char | S String | I Int | F Float
@@ -27,6 +28,12 @@ promoteLit t (S s) = promote s t
 promoteLit t (I i) = promote i t
 promoteLit t (F f) = promote f t
 
+boolValue :: Literal -> Bool
+boolValue (B b) = b
+boolValue (C c) = c /= chr 0
+boolValue (S s) = not $ null s
+boolValue (I i) = i /= 0
+boolValue (F f) = f /= 0.0
 
 class Promotable a where
     promote :: a -> LitType -> Literal
